@@ -10,6 +10,7 @@ from zoneinfo import ZoneInfo
 
 MOSCOW = ZoneInfo("Europe/Moscow")
 EXERCISE_NAMES = json.loads((Path(__file__).with_name("exercise_names.json")).read_text(encoding="utf-8"))
+EXERCISE_NAMES_RU = json.loads((Path(__file__).with_name("exercise_names_ru.json")).read_text(encoding="utf-8"))
 METRIC_FIELDS = {
     "steps": ("steps",), "calories": ("calories",), "heart_rate": ("bpm",),
     "stress": ("stress",), "spo2": ("spo2",), "weight": ("weight",),
@@ -36,9 +37,9 @@ def _text_map(value):
     return {str(key): str(item) for key, item in value.items() if isinstance(item, (str, int)) and str(item).strip()}
 
 
-def exercise_names(state):
-    """OpenGym stores only exercise ids in workouts; resolve them from its catalog and overrides."""
-    names = dict(EXERCISE_NAMES)
+def exercise_overrides(state):
+    """Names the user set in OpenGym take priority over the built-in catalog."""
+    names = {}
     for item in state.get("customEx") or []:
         if isinstance(item, dict) and item.get("id"):
             name = item.get("n") or item.get("name")
@@ -54,6 +55,18 @@ def exercise_names(state):
                 if name:
                     names[str(item["id"])] = str(name)
     return names
+
+
+def exercise_label(raw_id, canonical_id, overrides):
+    """Return (display label, english name when it belongs in brackets)."""
+    override = overrides.get(raw_id) or overrides.get(canonical_id)
+    if override:
+        return override, None
+    ru = EXERCISE_NAMES_RU.get(raw_id) or EXERCISE_NAMES_RU.get(canonical_id)
+    en = EXERCISE_NAMES.get(raw_id) or EXERCISE_NAMES.get(canonical_id)
+    if ru and en and ru.casefold() != en.casefold():
+        return ru, en
+    return ru or en or raw_id or "Упражнение", None
 
 
 def exercise_aliases(state):
