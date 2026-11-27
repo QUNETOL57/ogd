@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#000000">
   <title>openGym dashboard</title>
-  <link rel="stylesheet" href="/styles.css?v=8">
-  <link rel="stylesheet" href="/extras.css?v=8">
+  <link rel="stylesheet" href="/styles.css?v=9">
+  <link rel="stylesheet" href="/extras.css?v=9">
 </head>
 <body>
   <main id="auth" class="auth-wrap" hidden>
@@ -53,6 +53,11 @@
     <section class="main-area">
       <header class="topbar"><div class="topbar-head"><span class="topbar-mark" aria-hidden="true"><svg viewBox="80 169 352 174"><path d="M80 242h352v28H80zM80 199h36v114H80zM131 169h47v174h-47zM334 169h47v174h-47zM396 199h36v114h-36z"/></svg></span><div><span class="breadcrumb">ЗДОРОВЬЕ</span><h1 id="pageTitle">Обзор</h1></div></div><div class="top-actions"><span class="tz-tag">◷ Москва · UTC+3</span><button class="text-btn" id="logoutMobile" type="button">Выйти</button><button class="btn outline" id="importOpen">＋ Импорт данных</button></div></header>
       <div id="notice" class="notice" role="status" hidden></div>
+
+      <section id="importStatus" class="panel import-status" hidden>
+        <div class="panel-head"><div><h3>Импорт архива</h3><p class="muted">Время начала и статус обработки</p></div><button class="text-btn" type="button" id="importStatusClose">Скрыть</button></div>
+        <div class="import-table-wrap"><table class="import-table"><thead><tr><th>Начало</th><th>Файл</th><th>Статус</th><th>Прогресс</th></tr></thead><tbody id="importRows"></tbody></table></div>
+      </section>
 
       <section class="view" id="view-dashboard">
         <div class="toolbar"><div><h2>Ваше здоровье</h2><p class="muted" id="rangeCaption">—</p></div><div class="pills" id="periods"><button data-period="day">День</button><button data-period="week" class="active">Неделя</button><button data-period="month">Месяц</button><button data-period="year">Год</button><button data-period="all">Всё время</button></div></div>
@@ -107,9 +112,9 @@
     </section>
   </div>
 
-  <dialog id="importDialog" class="dialog"><form id="importForm"><button class="dialog-close" type="button" data-close>×</button><div class="eyebrow">ИМПОРТ ДАННЫХ</div><h2>Архив данных</h2><p class="muted">Выберите ZIP и введите пароль архива. Файл не распаковывается в общую папку.</p><label>ZIP-файл<input name="file" type="file" accept=".zip,application/zip" required></label><label>Пароль архива<input name="password" type="password" autocomplete="off" required></label><div class="import-progress" id="importProgress" hidden><div class="import-progress-head"><span id="importProgressLabel">Загрузка архива…</span><span id="importProgressValue">0%</span></div><div class="import-progress-track"><div class="import-progress-bar" id="importProgressBar"></div></div></div><div class="dialog-actions"><button class="btn outline" type="button" data-close>Отмена</button><button class="btn primary" type="submit">Импортировать</button></div><p class="error" id="importError"></p></form></dialog>
+  <dialog id="importDialog" class="dialog"><form id="importForm"><button class="dialog-close" type="button" data-close>×</button><div class="eyebrow">ИМПОРТ ДАННЫХ</div><h2>Архив данных</h2><p class="muted">Выберите ZIP и введите пароль архива. Файл не распаковывается в общую папку.</p><label>ZIP-файл<input name="file" type="file" accept=".zip,application/zip" required></label><label>Пароль архива<input name="password" type="password" autocomplete="off" required></label><div class="dialog-actions"><button class="btn outline" type="button" data-close>Отмена</button><button class="btn primary" type="submit">Импортировать</button></div><p class="error" id="importError"></p></form></dialog>
   <dialog id="detailDialog" class="dialog detail-dialog"><button class="dialog-close" type="button" data-close>×</button><div id="workoutDetail"></div></dialog>
   <div id="toast" class="toast" role="status"></div>
-  <script src="/app.js?v=8" defer></script>
+  <script src="/app.js?v=9" defer></script>
 </body>
 </html>
