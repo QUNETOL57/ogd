@@ -370,8 +370,7 @@ def import_zip(request: Request, file: UploadFile = File(...), password: str = F
     if file.size and file.size > 500 * 1024 * 1024:
         raise HTTPException(413, "Максимальный размер архива — 500 МБ")
     digest = archive_digest(file.file)
-    if db.scalar(select(ImportBatch.id).where(ImportBatch.user_id == user.id, ImportBatch.digest == digest)):
-        return {"ok": True, "duplicate": True, "message": "Этот архив уже импортирован"}
+    already_imported = db.scalar(select(ImportBatch.id).where(ImportBatch.user_id == user.id, ImportBatch.digest == digest)) is not None
     metric_count = workout_count = 0
     metric_batch = []
     try:
@@ -396,7 +395,8 @@ def import_zip(request: Request, file: UploadFile = File(...), password: str = F
             db.execute(insert(Metric).values(metric_batch).on_conflict_do_nothing(constraint="uq_metrics_user_key_sample_ts_payload_hash"))
         if not metric_count and not workout_count:
             raise ValueError("В архиве не найдены данные здоровья")
-        db.add(ImportBatch(user_id=user.id, digest=digest, file_name=Path(file.filename).name[:255]))
+        if not already_imported:
+            db.add(ImportBatch(user_id=user.id, digest=digest, file_name=Path(file.filename).name[:255]))
         db.commit()
     except (RuntimeError, zipfile.BadZipFile, zipfile.LargeZipFile, OSError) as exc:
         db.rollback()
@@ -407,7 +407,7 @@ def import_zip(request: Request, file: UploadFile = File(...), password: str = F
     except Exception:
         db.rollback()
         raise HTTPException(500, "Импорт не завершён; данные не были сохранены")
-    return {"ok": True, "metrics": metric_count, "workouts": workout_count, "message": f"Импортировано показателей: {metric_count}, тренировок: {workout_count}"}
+    return {"ok": True, "duplicate": already_imported, "metrics": metric_count, "workouts": workout_count, "message": f"Обработано показателей: {metric_count}, тренировок: {workout_count}"}
 
 
 def _period_start(period, last_date):
@@ -438,6 +438,7 @@ def dashboard(period: str = "year", user: User = Depends(current_user), db: Sess
         elif key == "spo2": row["spo2_avg"] = round(float(avg), 1)
         elif key == "sleep_minutes": row["sleep_min"] = round(float(total))
         elif key in {"sleep_deep", "sleep_light", "sleep_rem"}: row[key] = round(float(total))
+        elif key in {"sleep_bedtime", "sleep_waketime"}: row[key] = round(float(avg), 2)
         elif key == "rhr": row["rhr"] = round(float(avg))
         elif key == "weight": row["weight"] = round(float(avg), 1)
     last = max(daily) if daily else None
@@ -639,5 +640,5 @@ def static(path: str):
     candidate = (BASE / "static" / path).resolve()
     static_root = (BASE / "static").resolve()
     if candidate.parent == static_root and candidate.is_file():
-        return FileResponse(candidate)
-    return FileResponse(static_root / "index.html")
+        return FileResponse(candidate, headers={"Cache-Control": "no-cache"})
+    return FileResponse(static_root / "index.html", headers={"Cache-Control": "no-cache"})

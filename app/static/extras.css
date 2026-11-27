@@ -23,4 +23,12 @@
 .grid-2{gap:16px}
 .heatmap{grid-template-rows:repeat(7,12px);grid-auto-columns:12px;gap:4px;min-height:120px}
 .heat-cell{width:12px;height:12px;border-radius:3px}
+.lime{background:#9be700}
+.sport-breakdown{display:grid;gap:13px}
+.sport-row{display:grid;grid-template-columns:minmax(80px,145px) minmax(50px,1fr) auto;align-items:center;gap:12px;font-size:13px}
+.sport-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sport-track{height:9px;background:#111;border-radius:99px;overflow:hidden}
+.sport-track i{display:block;height:100%;border-radius:inherit}
+.sport-value{color:var(--muted);white-space:nowrap;font-size:12px}
+.panel-head .legend{max-width:58%;flex-wrap:wrap;justify-content:flex-end;white-space:normal}
 @media(max-width:760px){.main-area{padding-right:13px;padding-left:13px}.view{gap:14px}.toolbar h2{font-size:18px}.panel{padding:16px}.panel-head h3{font-size:16px}.panel-head p{font-size:11px}.kpi{padding:13px 14px}.kpi-label{font-size:12px}.kpi-val{font-size:22px}.kpi-note{font-size:11px}.chart-box{height:230px}.chart-box.short{height:190px}.heatmap{grid-template-rows:repeat(7,9px);grid-auto-columns:9px;gap:3px}.heat-cell{width:9px;height:9px}}

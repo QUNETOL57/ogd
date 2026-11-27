@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#000000">
   <title>openGym dashboard</title>
-  <link rel="stylesheet" href="/styles.css">
-  <link rel="stylesheet" href="/extras.css">
+  <link rel="stylesheet" href="/styles.css?v=4">
+  <link rel="stylesheet" href="/extras.css?v=4">
 </head>
 <body>
   <main id="auth" class="auth-wrap" hidden>
@@ -57,14 +57,26 @@
       <section class="view" id="view-dashboard">
         <div class="toolbar"><div><h2>Ваше здоровье</h2><p class="muted" id="rangeCaption">—</p></div><div class="pills" id="periods"><button data-period="day">День</button><button data-period="week">Неделя</button><button data-period="month">Месяц</button><button data-period="year" class="active">Год</button><button data-period="all">Всё время</button></div></div>
         <div class="kpis" id="kpis"></div>
-        <div class="panel"><div class="panel-head"><div><h3>Активность по дням</h3><p class="muted">Шаги и сожжённые килокалории</p></div><div class="legend"><span><i class="dot blue"></i>Шаги</span><span><i class="dot amber"></i>ккал</span></div></div><div class="chart-box"><canvas id="activityChart"></canvas></div></div>
+        <div class="panel"><div class="panel-head"><div><h3>Шаги по дням и скользящее среднее (14 дн.)</h3><p class="muted">Дневные значения, среднее за 14 дней и цель 10 000 шагов</p></div><div class="legend"><span><i class="dot blue"></i>Шаги</span><span><i class="dot amber"></i>Среднее 14 дн.</span><span><i class="dot cyan"></i>Цель</span></div></div><div class="chart-box"><canvas id="activityChart"></canvas></div></div>
         <div class="grid-2">
-        <div class="panel"><div class="panel-head"><div><h3>Календарь активности</h3><p class="muted">Последние 12 месяцев</p></div><div class="legend"><span><i class="dot green"></i>Шаги</span><span><i class="workout-key"></i>Тренировка</span></div></div><div id="heatmap" class="heatmap"></div><div class="heat-legend"><span>Меньше</span><i></i><i></i><i></i><i></i><span>Больше</span></div></div>
-          <div class="panel"><div class="panel-head"><div><h3>Сон</h3><p class="muted">Продолжительность сна по дням</p></div><span class="unit">часы</span></div><div class="chart-box short"><canvas id="sleepChart"></canvas></div></div>
+          <div class="panel"><div class="panel-head"><div><h3>Календарь за 12 месяцев</h3><p class="muted">Активность по дням</p></div><div class="legend"><span><i class="dot green"></i>Шаги</span><span><i class="workout-key"></i>Тренировка</span></div></div><div id="heatmap" class="heatmap"></div><div class="heat-legend"><span>Меньше</span><i></i><i></i><i></i><i></i><span>Больше</span></div></div>
+          <div class="panel"><div class="panel-head"><div><h3>Профиль недели (Пн–Вс)</h3><p class="muted">Средние шаги и тренировки по дням недели</p></div><div class="legend"><span><i class="dot blue"></i>Ср. шаги</span><span><i class="dot cyan"></i>Тренировки</span></div></div><div class="chart-box short"><canvas id="weekdayChart"></canvas></div></div>
         </div>
         <div class="grid-2">
-          <div class="panel"><div class="panel-head"><div><h3>Пульс</h3><p class="muted">Средний, минимальный и максимальный</p></div><span class="unit">уд/мин</span></div><div class="chart-box short"><canvas id="hrChart"></canvas></div></div>
-          <div class="panel"><div class="panel-head"><div><h3>Стресс</h3><p class="muted">Средний уровень по дням</p></div><span class="unit">баллы</span></div><div class="chart-box short"><canvas id="stressChart"></canvas></div></div>
+          <div class="panel"><div class="panel-head"><div><h3>Тренировки по видам спорта</h3><p class="muted">Количество занятий и суммарное время</p></div></div><div id="sportBreakdown" class="sport-breakdown"></div></div>
+          <div class="panel"><div class="panel-head"><div><h3>Тренировки по месяцам</h3><p class="muted">Распределение по видам спорта</p></div><div id="monthlyWorkoutLegend" class="legend"></div></div><div class="chart-box short"><canvas id="monthlyWorkoutsChart"></canvas></div></div>
+        </div>
+        <div class="grid-2">
+          <div class="panel"><div class="panel-head"><div><h3>Плавание: дистанция и пульс</h3><p class="muted">По тренировкам плавания</p></div><div class="legend"><span><i class="dot blue"></i>Дистанция, м</span><span><i class="dot red"></i>Ср. пульс</span></div></div><div class="chart-box short"><canvas id="swimChart"></canvas></div></div>
+          <div class="panel"><div class="panel-head"><div><h3>Средний пульс в тренировках</h3><p class="muted">Экспорт не содержит длительность по пульсовым зонам</p></div><span class="unit">уд/мин</span></div><div class="chart-box short"><canvas id="zonesChart"></canvas></div></div>
+        </div>
+        <div class="grid-2">
+          <div class="panel"><div class="panel-head"><div><h3>Сон: фазы и длительность</h3><p class="muted">Глубокий, REM и лёгкий сон по дням</p></div><div class="legend"><span><i class="dot purple"></i>Глубокий</span><span><i class="dot lime"></i>REM</span><span><i class="dot blue"></i>Лёгкий</span></div></div><div class="chart-box short"><canvas id="sleepStagesChart"></canvas></div></div>
+          <div class="panel"><div class="panel-head"><div><h3>Режим сна: отбой и подъём</h3><p class="muted">Время засыпания и пробуждения</p></div><div class="legend"><span><i class="dot purple"></i>Засыпание</span><span><i class="dot amber"></i>Пробуждение</span></div></div><div class="chart-box short"><canvas id="sleepScheduleChart"></canvas></div></div>
+        </div>
+        <div class="grid-2">
+          <div class="panel"><div class="panel-head"><div><h3>Пульс: покой, средний и разброс</h3><p class="muted">Частота сердечных сокращений по дням</p></div><span class="unit">уд/мин</span></div><div class="chart-box short"><canvas id="hrChart"></canvas></div></div>
+          <div class="panel"><div class="panel-head"><div><h3>Стресс и SpO₂</h3><p class="muted">Средние значения за день</p></div><div class="legend"><span><i class="dot amber"></i>Стресс</span><span><i class="dot lime"></i>SpO₂, %</span></div></div><div class="chart-box short"><canvas id="stressChart"></canvas></div></div>
         </div>
         <div class="grid-2">
           <div class="panel"><div class="panel-head"><div><h3>Вес</h3><p class="muted">Измерения веса</p></div><span class="unit">кг</span></div><div class="chart-box short"><canvas id="weightChart"></canvas></div></div>
@@ -98,6 +110,6 @@
   <dialog id="importDialog" class="dialog"><form id="importForm"><button class="dialog-close" type="button" data-close>×</button><div class="eyebrow">ИМПОРТ ДАННЫХ</div><h2>Архив данных</h2><p class="muted">Выберите ZIP и введите пароль архива. Файл не распаковывается в общую папку.</p><label>ZIP-файл<input name="file" type="file" accept=".zip,application/zip" required></label><label>Пароль архива<input name="password" type="password" autocomplete="off" required></label><div class="dialog-actions"><button class="btn outline" type="button" data-close>Отмена</button><button class="btn primary" type="submit">Импортировать</button></div><p class="error" id="importError"></p></form></dialog>
   <dialog id="detailDialog" class="dialog detail-dialog"><button class="dialog-close" type="button" data-close>×</button><div id="workoutDetail"></div></dialog>
   <div id="toast" class="toast" role="status"></div>
-  <script src="/app.js" defer></script>
+  <script src="/app.js?v=4" defer></script>
 </body>
 </html>

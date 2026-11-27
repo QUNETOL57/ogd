@@ -108,11 +108,15 @@ def iter_health_zip(file: BinaryIO, password: str):
                             else:
                                 phases = sum(float(payload.get(k) or 0) for k in ("sleep_deep_duration", "sleep_light_duration", "sleep_rem_duration"))
                                 sleep_min = phases if phases else max(0, (wake - bedtime) / 60)
+                            bed_local = datetime.fromtimestamp(bedtime, MOSCOW)
+                            wake_local = datetime.fromtimestamp(wake, MOSCOW)
                             values = {
                                 "sleep_minutes": sleep_min,
                                 "sleep_deep": float(payload.get("sleep_deep_duration") or 0),
                                 "sleep_light": float(payload.get("sleep_light_duration") or 0),
                                 "sleep_rem": float(payload.get("sleep_rem_duration") or 0),
+                                "sleep_bedtime": bed_local.hour + bed_local.minute / 60,
+                                "sleep_waketime": wake_local.hour + wake_local.minute / 60,
                             }
                             timestamp = wake
                         else:
