@@ -86,9 +86,10 @@ input[type=file]:focus-visible{outline:none;border-color:var(--blue);box-shadow:
   .topbar-head>div{min-width:0}
   .topbar-brand{display:inline-flex;flex:none;align-items:center}
   .topbar-brand .brand-logo{--logo-size:15px;gap:2px}
-  .topbar-brand .logo-caption{font-size:8px}
-  .topbar-title{min-width:0}
-  .topbar-title .breadcrumb{display:none}
+  .topbar-brand .logo-caption{font-size:8px;color:var(--blue);opacity:.78}
+  .topbar-brand .logo-line svg{fill:var(--blue)}
+  .topbar-brand .logo-word,.topbar-brand .logo-word>span{color:var(--blue)}
+  .topbar-title{display:none}
   .topbar-title h1{font-size:19px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .breadcrumb{font-size:9px}
   .tz-tag{display:none}
