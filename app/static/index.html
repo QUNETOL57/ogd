@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#000000">
   <title>openGym dashboard</title>
-  <link rel="stylesheet" href="/styles.css?v=10">
-  <link rel="stylesheet" href="/extras.css?v=10">
+  <link rel="stylesheet" href="/styles.css?v=14">
+  <link rel="stylesheet" href="/extras.css?v=14">
 </head>
 <body>
   <main id="auth" class="auth-wrap" hidden>
@@ -51,7 +51,7 @@
     </aside>
 
     <section class="main-area">
-      <header class="topbar"><div class="topbar-head"><span class="topbar-mark" aria-hidden="true"><svg viewBox="80 169 352 174"><path d="M80 242h352v28H80zM80 199h36v114H80zM131 169h47v174h-47zM334 169h47v174h-47zM396 199h36v114h-36z"/></svg></span><div><span class="breadcrumb">ЗДОРОВЬЕ</span><h1 id="pageTitle">Обзор</h1></div></div><div class="top-actions"><span class="tz-tag">◷ Москва · UTC+3</span><button class="text-btn" id="logoutMobile" type="button">Выйти</button><button class="btn outline" id="importOpen">＋ Импорт данных</button></div></header>
+      <header class="topbar"><div class="topbar-head"><span class="topbar-brand"><span class="brand-logo"><span class="logo-line"><svg viewBox="80 169 352 174" aria-hidden="true"><path d="M80 242h352v28H80zM80 199h36v114H80zM131 169h47v174h-47zM334 169h47v174h-47zM396 199h36v114h-36z"/></svg><span class="logo-word">open<span>Gym</span></span></span><span class="logo-caption">dashboard</span></span></span><div class="topbar-title"><span class="breadcrumb">ЗДОРОВЬЕ</span><h1 id="pageTitle">Обзор</h1></div></div><div class="top-actions"><button class="text-btn" id="logoutMobile" type="button">Выйти</button></div></header>
       <div id="notice" class="notice" role="status" hidden></div>
 
       <section id="importStatus" class="panel import-status" hidden>
@@ -162,9 +162,10 @@
           <div class="panel"><h3>Импорт данных</h3><p class="muted">Загрузите ZIP-архив и введите пароль от него. Пароль используется только для чтения архива и не сохраняется.</p><button class="btn primary" id="importOpen2">Загрузить архив</button><div id="importHistory" class="tiny muted"></div></div>
           <div class="panel"><h3>Open Gym</h3><p class="muted">Подключите личный токен Open Gym с разрешением «Тренировки: просмотр». Токен хранится в зашифрованном виде.</p><div class="gym-state" id="gymState" hidden><div class="gym-connected"><span class="gym-dot"></span>Токен сохранён</div><p class="tiny muted">Сервер: <span id="gymServer"></span></p><p class="tiny muted">Токен: <span class="token-mask">ogt_••••••••</span></p><p class="tiny muted">Тренировок Open Gym: <span id="gymWorkouts">0</span></p></div><form id="gymForm"><label>Адрес сервера<input name="base_url" value="https://opengym.qbav.online" required></label><label>Токен Open Gym<input name="token" type="password" placeholder="ogt_…" autocomplete="off" required></label><div class="actions"><button class="btn primary" type="submit" id="gymConnect">Подключить</button></div></form><div class="actions" id="gymActions" hidden><button class="btn outline" type="button" id="gymSync">Синхронизировать</button><button class="btn outline" type="button" id="gymReplace">Заменить токен</button><button class="text-btn danger-text" type="button" id="gymDisconnect">Отключить</button></div><p class="tiny muted">Создайте токен в Open Gym → Настройки → API-токены, только чтение тренировок.</p></div>
           <div class="panel" id="adminPanel" hidden><h3>Приглашения</h3><p class="muted">Ссылка действует 7 дней и работает один раз. Отправьте её новому участнику.</p><button class="btn outline" id="inviteCreate">Создать ссылку-приглашение</button><a id="newInvite" class="invite-code" target="_blank" rel="noopener" hidden></a><p id="inviteMeta" class="tiny muted" hidden></p></div>
+          <div class="panel"><h3>Время и регион</h3><p class="muted">Все даты и время отображаются по Москве (UTC+3).</p></div>
         </div>
       </section>
-      <footer>openGym dashboard · Europe/Moscow <span>Ваши данные изолированы и доступны только вашему аккаунту.</span></footer>
+      <footer>openGym dashboard <span>Ваши данные изолированы и доступны только вашему аккаунту.</span></footer>
     </section>
   </div>
 
@@ -172,6 +173,6 @@
   <dialog id="detailDialog" class="dialog detail-dialog"><button class="dialog-close" type="button" data-close>×</button><div id="workoutDetail"></div></dialog>
   <div id="tip" class="tip"></div>
   <div id="toast" class="toast" role="status"></div>
-  <script src="/app.js?v=10" defer></script>
+  <script src="/app.js?v=14" defer></script>
 </body>
 </html>
