@@ -1,8 +1,10 @@
 import hashlib
 import hmac
 import json
+import logging
 import os
 import secrets
+import tempfile
 import time
 import zipfile
 from bisect import bisect_left
@@ -13,7 +15,7 @@ from zoneinfo import ZoneInfo
 
 import httpx
 from cryptography.fernet import Fernet, InvalidToken
-from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi import BackgroundTasks, Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import BigInteger, Boolean, Date, DateTime, Float, ForeignKey, Index, Integer, JSON, String, Text, UniqueConstraint, create_engine, func, select, text
@@ -70,8 +72,13 @@ class ImportBatch(BaseModelDB):
     user_id = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     digest = mapped_column(String(64), nullable=False)
     file_name = mapped_column(String(255), nullable=False)
+    status = mapped_column(String(16), nullable=False, default="done", server_default="done")
+    metrics = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    workouts = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    error_message = mapped_column(String(500))
     imported_at = mapped_column(DateTime(timezone=True), server_default=func.now())
-    __table_args__ = (UniqueConstraint("user_id", "digest"),)
+    finished_at = mapped_column(DateTime(timezone=True))
+    __table_args__ = (Index("ix_imports_user_digest", "user_id", "digest"),)
 
 
 class Metric(BaseModelDB):
@@ -219,6 +226,15 @@ def startup():
     with engine.begin() as conn:
         conn.execute(text("ALTER TABLE invites ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ"))
         conn.execute(text("UPDATE invites SET expires_at = created_at + interval '7 days' WHERE expires_at IS NULL"))
+        conn.execute(text("ALTER TABLE imports ADD COLUMN IF NOT EXISTS status VARCHAR(16) NOT NULL DEFAULT 'done'"))
+        conn.execute(text("ALTER TABLE imports ADD COLUMN IF NOT EXISTS metrics INTEGER NOT NULL DEFAULT 0"))
+        conn.execute(text("ALTER TABLE imports ADD COLUMN IF NOT EXISTS workouts INTEGER NOT NULL DEFAULT 0"))
+        conn.execute(text("ALTER TABLE imports ADD COLUMN IF NOT EXISTS error_message VARCHAR(500)"))
+        conn.execute(text("ALTER TABLE imports ADD COLUMN IF NOT EXISTS finished_at TIMESTAMPTZ"))
+        conn.execute(text("ALTER TABLE imports DROP CONSTRAINT IF EXISTS imports_user_id_digest_key"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_imports_user_digest ON imports (user_id, digest)"))
+        conn.execute(text("UPDATE imports SET status = 'done' WHERE status IS NULL"))
+        conn.execute(text("UPDATE imports SET status = 'error', error_message = COALESCE(error_message, 'Импорт прерван. Повторите загрузку.'), finished_at = COALESCE(finished_at, now()) WHERE status = 'processing'"))
     bootstrap = os.getenv("BOOTSTRAP_INVITE", "").strip()
     if bootstrap:
         with SessionLocal() as db:
@@ -363,51 +379,138 @@ def share(body: ShareChoice, user: User = Depends(current_user), db: Session = D
     return {"share_comparison": user.share_comparison}
 
 
-@app.post("/api/import")
-def import_zip(request: Request, file: UploadFile = File(...), password: str = Form(...), user: User = Depends(current_user), db: Session = Depends(get_db)):
-    if not file.filename or not file.filename.lower().endswith(".zip"):
-        raise HTTPException(400, "Загрузите ZIP-архив с данными")
-    if file.size and file.size > 500 * 1024 * 1024:
-        raise HTTPException(413, "Максимальный размер архива — 500 МБ")
-    digest = archive_digest(file.file)
-    already_imported = db.scalar(select(ImportBatch.id).where(ImportBatch.user_id == user.id, ImportBatch.digest == digest)) is not None
+def _import_payload(row: ImportBatch):
+    return {
+        "id": row.id,
+        "file_name": row.file_name,
+        "status": row.status or "done",
+        "metrics": row.metrics or 0,
+        "workouts": row.workouts or 0,
+        "error": row.error_message,
+        "created_at": row.imported_at.isoformat() if row.imported_at else None,
+        "finished_at": row.finished_at.isoformat() if row.finished_at else None,
+    }
+
+
+def _update_import_progress(job_id: int, metrics: int, workouts: int):
+    with SessionLocal() as db:
+        db.execute(text("UPDATE imports SET metrics = :metrics, workouts = :workouts WHERE id = :job_id").bindparams(metrics=metrics, workouts=workouts, job_id=job_id))
+        db.commit()
+
+
+def _fail_import(job_id: int, message: str):
+    with SessionLocal() as db:
+        db.execute(text(
+            "UPDATE imports SET status = 'error', error_message = :message, finished_at = now() WHERE id = :job_id"
+        ).bindparams(message=message[:500], job_id=job_id))
+        db.commit()
+
+
+def _run_import_job(job_id: int, path: str, password: str, user_id: int):
+    db = SessionLocal()
     metric_count = workout_count = 0
     metric_batch = []
     try:
-        for kind, item in iter_health_zip(file.file, password):
-            if kind == "metric":
-                metric_batch.append({
-                    "user_id": user.id, "key": item["key"], "sample_ts": item["timestamp"],
-                    "local_date": item["date"], "value": item["value"], "payload_hash": item["payload_hash"],
-                })
-                metric_count += 1
-                if len(metric_batch) >= 3000:
-                    db.execute(insert(Metric).values(metric_batch).on_conflict_do_nothing(constraint="uq_metrics_user_key_sample_ts_payload_hash"))
-                    metric_batch.clear()
-            else:
-                raw_for_hash = json.dumps(item["raw"], sort_keys=True, separators=(",", ":"))
-                source_hash = hashlib.sha256(f'{item["start_ts"]}:{item["kind"]}:{raw_for_hash}'.encode()).hexdigest()
-                values = {key: value for key, value in item.items() if key != "raw"}
-                values.update(user_id=user.id, source_hash=source_hash, raw=item["raw"])
-                db.execute(insert(Workout).values(**values).on_conflict_do_nothing(constraint="uq_workouts_user_source_hash"))
-                workout_count += 1
+        with open(path, "rb") as archive:
+            for kind, item in iter_health_zip(archive, password):
+                if kind == "metric":
+                    metric_batch.append({
+                        "user_id": user_id, "key": item["key"], "sample_ts": item["timestamp"],
+                        "local_date": item["date"], "value": item["value"], "payload_hash": item["payload_hash"],
+                    })
+                    metric_count += 1
+                    if len(metric_batch) >= 3000:
+                        db.execute(insert(Metric).values(metric_batch).on_conflict_do_nothing(constraint="uq_metrics_user_key_sample_ts_payload_hash"))
+                        metric_batch.clear()
+                        _update_import_progress(job_id, metric_count, workout_count)
+                else:
+                    raw_for_hash = json.dumps(item["raw"], sort_keys=True, separators=(",", ":"))
+                    source_hash = hashlib.sha256(f'{item["start_ts"]}:{item["kind"]}:{raw_for_hash}'.encode()).hexdigest()
+                    values = {key: value for key, value in item.items() if key != "raw"}
+                    values.update(user_id=user_id, source_hash=source_hash, raw=item["raw"])
+                    db.execute(insert(Workout).values(**values).on_conflict_do_nothing(constraint="uq_workouts_user_source_hash"))
+                    workout_count += 1
+                    if workout_count % 25 == 0:
+                        _update_import_progress(job_id, metric_count, workout_count)
         if metric_batch:
             db.execute(insert(Metric).values(metric_batch).on_conflict_do_nothing(constraint="uq_metrics_user_key_sample_ts_payload_hash"))
         if not metric_count and not workout_count:
             raise ValueError("В архиве не найдены данные здоровья")
-        if not already_imported:
-            db.add(ImportBatch(user_id=user.id, digest=digest, file_name=Path(file.filename).name[:255]))
+        db.execute(text(
+            "UPDATE imports SET status = 'done', metrics = :metrics, workouts = :workouts, error_message = NULL, finished_at = now() WHERE id = :job_id"
+        ).bindparams(metrics=metric_count, workouts=workout_count, job_id=job_id))
         db.commit()
     except (RuntimeError, zipfile.BadZipFile, zipfile.LargeZipFile, OSError) as exc:
         db.rollback()
-        raise HTTPException(400, "Не удалось открыть архив: проверьте пароль и формат файла") from exc
+        _fail_import(job_id, "Не удалось открыть архив: проверьте пароль и формат файла")
     except ValueError as exc:
         db.rollback()
-        raise HTTPException(400, str(exc)) from exc
+        _fail_import(job_id, str(exc) or "Импорт не завершён")
     except Exception:
         db.rollback()
-        raise HTTPException(500, "Импорт не завершён; данные не были сохранены")
-    return {"ok": True, "duplicate": already_imported, "metrics": metric_count, "workouts": workout_count, "message": f"Обработано показателей: {metric_count}, тренировок: {workout_count}"}
+        logging.exception("Import job %s failed", job_id)
+        _fail_import(job_id, "Импорт не завершён; данные не были сохранены")
+    finally:
+        db.close()
+        Path(path).unlink(missing_ok=True)
+
+
+@app.get("/api/imports")
+def list_imports(user: User = Depends(current_user), db: Session = Depends(get_db)):
+    rows = db.scalars(select(ImportBatch).where(ImportBatch.user_id == user.id).order_by(ImportBatch.id.desc()).limit(30))
+    return {"items": [_import_payload(row) for row in rows]}
+
+
+@app.post("/api/import", status_code=202)
+def import_zip(request: Request, background_tasks: BackgroundTasks, file: UploadFile = File(...), password: str = Form(...), user: User = Depends(current_user), db: Session = Depends(get_db)):
+    if not file.filename or not file.filename.lower().endswith(".zip"):
+        raise HTTPException(400, "Загрузите ZIP-архив с данными")
+    if file.size and file.size > 500 * 1024 * 1024:
+        raise HTTPException(413, "Максимальный размер архива — 500 МБ")
+    path = None
+    try:
+        upload = tempfile.NamedTemporaryFile(prefix="ogd-import-", suffix=".zip", delete=False)
+        path = Path(upload.name)
+        with upload:
+            while chunk := file.file.read(1024 * 1024):
+                upload.write(chunk)
+        with path.open("rb") as saved:
+            digest = archive_digest(saved)
+        existing = db.scalar(select(ImportBatch).where(
+            ImportBatch.user_id == user.id,
+            ImportBatch.digest == digest,
+            ImportBatch.status.in_(("processing", "done")),
+        ).order_by(ImportBatch.id.desc()))
+        if existing:
+            path.unlink(missing_ok=True)
+            path = None
+            payload = _import_payload(existing)
+            payload["duplicate"] = existing.status == "done"
+            return JSONResponse(payload, status_code=200)
+        job = ImportBatch(
+            user_id=user.id,
+            digest=digest,
+            file_name=Path(file.filename).name[:255],
+            status="processing",
+        )
+        db.add(job)
+        db.commit()
+        db.refresh(job)
+        background_tasks.add_task(_run_import_job, job.id, str(path), password, user.id)
+        path = None
+        return JSONResponse(_import_payload(job), status_code=202)
+    except HTTPException:
+        raise
+    except (RuntimeError, zipfile.BadZipFile, zipfile.LargeZipFile, OSError) as exc:
+        raise HTTPException(400, "Не удалось открыть архив: проверьте пароль и формат файла") from exc
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    except Exception as exc:
+        logging.exception("Unable to start import")
+        raise HTTPException(500, "Не удалось начать импорт; повторите загрузку") from exc
+    finally:
+        if path:
+            path.unlink(missing_ok=True)
 
 
 def _period_start(period, last_date):

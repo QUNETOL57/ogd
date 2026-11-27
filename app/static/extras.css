@@ -51,7 +51,7 @@ input[type=file]:focus-visible{outline:none;border-color:var(--blue);box-shadow:
 .import-table td{padding:10px;border-top:1px solid var(--border);vertical-align:middle}
 .import-table td:first-child{white-space:nowrap;color:var(--muted)}
 .import-file{max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.import-state{font-weight:600}
+.import-state{display:inline-block;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle;font-weight:600}
 .import-state.ok{color:#23d18b}
 .import-state.error{color:#fb414a}
 .import-table .import-progress{margin:0;min-width:90px}
