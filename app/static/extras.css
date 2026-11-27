@@ -32,7 +32,8 @@
 .sport-value{color:var(--muted);white-space:nowrap;font-size:12px}
 .panel-head .legend{max-width:58%;flex-wrap:wrap;justify-content:flex-end;white-space:normal}
 .topbar-head{display:flex;align-items:center;gap:10px;min-width:0}
-.topbar-mark{display:none}
+.topbar-brand{display:none}
+.topbar-title{min-width:0}
 input[type=file]{border:1px dashed #2b2b2b;background:#101010;border-radius:9px;padding:8px;color:var(--foreground);font-size:12px;cursor:pointer;min-height:44px}
 input[type=file]::file-selector-button,input[type=file]::-webkit-file-upload-button{appearance:none;-webkit-appearance:none;border:1px solid #303030;background:#1e1e1e;color:#e5e5e5;border-radius:7px;padding:8px 12px;margin-right:10px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer}
 input[type=file]::file-selector-button:hover,input[type=file]::-webkit-file-upload-button:hover{background:#2a2a2a;border-color:#444}
@@ -83,9 +84,12 @@ input[type=file]:focus-visible{outline:none;border-color:var(--blue);box-shadow:
   .topbar{height:auto;min-height:56px;gap:8px;margin-bottom:14px;padding:8px 0;flex-wrap:wrap}
   .topbar-head{gap:9px;min-width:0}
   .topbar-head>div{min-width:0}
-  .topbar-mark{display:block;flex:none;height:20px}
-  .topbar-mark svg{height:100%;width:auto;fill:#a3e635;display:block}
-  .topbar h1{font-size:19px}
+  .topbar-brand{display:inline-flex;flex:none;align-items:center}
+  .topbar-brand .brand-logo{--logo-size:15px;gap:2px}
+  .topbar-brand .logo-caption{font-size:8px}
+  .topbar-title{min-width:0}
+  .topbar-title .breadcrumb{display:none}
+  .topbar-title h1{font-size:19px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .breadcrumb{font-size:9px}
   .tz-tag{display:none}
   .top-actions{gap:6px;flex:none;min-width:0;margin-left:auto}
