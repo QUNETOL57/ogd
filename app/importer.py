@@ -28,7 +28,7 @@ def _local_date(timestamp: int) -> date:
     return datetime.fromtimestamp(timestamp, MOSCOW).date()
 
 
-def iter_mifitness_zip(file: BinaryIO, password: str):
+def iter_health_zip(file: BinaryIO, password: str):
     """Stream normalized rows without extracting archive paths or buffering the export."""
     pwd = password.encode("utf-8")
     with zipfile.ZipFile(file) as archive:

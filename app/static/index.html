@@ -4,16 +4,16 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#f8fafc">
-  <title>Mi Fitness — Аналитика</title>
+  <title>ogd — openGym dashboard</title>
   <link rel="stylesheet" href="/styles.css">
   <link rel="stylesheet" href="/extras.css">
 </head>
 <body>
   <main id="auth" class="auth-wrap" hidden>
     <section class="auth-card">
-      <div class="brand-mark">mi</div>
-      <p class="eyebrow">ЛИЧНАЯ АНАЛИТИКА</p>
-      <h1>Mi Fitness</h1>
+      <div class="brand-mark">og</div>
+      <p class="eyebrow">OPENGYM DASHBOARD</p>
+      <h1>ogd</h1>
       <p class="muted">Данные здоровья и тренировок — только для вас.</p>
       <div class="auth-tabs"><button class="active" data-auth="login">Войти</button><button data-auth="register">Создать аккаунт</button></div>
       <form id="authForm">
@@ -29,7 +29,7 @@
 
   <div id="app" class="app-shell" hidden>
     <aside class="sidebar">
-      <a class="brand" href="#"><span class="brand-mark">mi</span><span>Mi Fitness<small>АНАЛИТИКА</small></span></a>
+      <a class="brand" href="#"><span class="brand-mark">og</span><span>ogd<small>OPENGYM DASHBOARD</small></span></a>
       <div class="side-label">РАЗДЕЛЫ</div>
       <nav class="nav">
         <button class="nav-item active" data-view="dashboard"><span>◫</span>Обзор</button>
@@ -37,7 +37,7 @@
         <button class="nav-item" data-view="compare"><span>⇄</span>Сравнение</button>
         <button class="nav-item" data-view="settings"><span>⚙</span>Настройки</button>
       </nav>
-      <div class="side-bottom"><div class="user-mini"><span class="avatar" id="avatar">M</span><span><b id="userName"></b><small>Личный профиль</small></span></div><button id="logout" class="text-btn">Выйти</button></div>
+      <div class="side-bottom"><div class="user-mini"><span class="avatar" id="avatar">O</span><span><b id="userName"></b><small>Личный профиль</small></span></div><button id="logout" class="text-btn">Выйти</button></div>
     </aside>
 
     <section class="main-area">
@@ -57,13 +57,13 @@
           <div class="panel"><div class="panel-head"><div><h3>Стресс</h3><p class="muted">Средний уровень по дням</p></div><span class="unit">баллы</span></div><div class="chart-box short"><canvas id="stressChart"></canvas></div></div>
         </div>
         <div class="grid-2">
-          <div class="panel"><div class="panel-head"><div><h3>Вес</h3><p class="muted">Измерения Xiaomi</p></div><span class="unit">кг</span></div><div class="chart-box short"><canvas id="weightChart"></canvas></div></div>
+          <div class="panel"><div class="panel-head"><div><h3>Вес</h3><p class="muted">Измерения веса</p></div><span class="unit">кг</span></div><div class="chart-box short"><canvas id="weightChart"></canvas></div></div>
           <div class="panel"><div class="panel-head"><div><h3>Тренировки</h3><p class="muted">Последние занятия и потраченная энергия</p></div><button class="text-btn" data-goto="workouts">Все тренировки →</button></div><div id="recentWorkouts" class="recent-list"></div></div>
         </div>
       </section>
 
       <section class="view" id="view-workouts" hidden>
-        <div class="toolbar"><div><h2>История тренировок</h2><p class="muted">Детали Mi Fitness и связанные занятия Open Gym</p></div><select id="workoutPeriod" class="select"><option value="all">Весь период</option><option value="year">Год</option><option value="month">Месяц</option><option value="week">Неделя</option><option value="day">День</option></select></div>
+        <div class="toolbar"><div><h2>История тренировок</h2><p class="muted">Детали тренировок и связанные занятия Open Gym</p></div><select id="workoutPeriod" class="select"><option value="all">Весь период</option><option value="year">Год</option><option value="month">Месяц</option><option value="week">Неделя</option><option value="day">День</option></select></div>
         <div class="panel"><div id="workoutList" class="workout-list"></div></div>
       </section>
 
@@ -76,16 +76,16 @@
       <section class="view" id="view-settings" hidden>
         <div class="toolbar"><div><h2>Настройки</h2><p class="muted">Импорт данных и подключения</p></div></div>
         <div class="grid-2 settings-grid">
-          <div class="panel"><h3>Импорт Mi Fitness</h3><p class="muted">Загрузите ZIP-архив и введите пароль от него. Пароль используется только для чтения архива и не сохраняется.</p><button class="btn primary" id="importOpen2">Загрузить архив</button><div id="importHistory" class="tiny muted"></div></div>
+          <div class="panel"><h3>Импорт данных</h3><p class="muted">Загрузите ZIP-архив и введите пароль от него. Пароль используется только для чтения архива и не сохраняется.</p><button class="btn primary" id="importOpen2">Загрузить архив</button><div id="importHistory" class="tiny muted"></div></div>
           <div class="panel"><h3>Open Gym</h3><p class="muted">Подключите личный токен Open Gym с разрешением «Тренировки: просмотр». Токен будет зашифрован в базе данных.</p><form id="gymForm"><label>Адрес сервера<input name="base_url" value="https://opengym.qbav.online" required></label><label>Токен Open Gym<input name="token" type="password" placeholder="ogt_…" autocomplete="off" required></label><div class="actions"><button class="btn primary" type="submit">Подключить</button><button class="btn outline" type="button" id="gymSync">Синхронизировать</button><button class="text-btn danger-text" type="button" id="gymDisconnect">Отключить</button></div></form><p class="tiny muted">Создайте токен в Open Gym → Настройки → API-токены, только чтение тренировок.</p></div>
           <div class="panel" id="adminPanel" hidden><h3>Приглашения</h3><p class="muted">Администратор может создать одноразовый код для нового участника.</p><button class="btn outline" id="inviteCreate">Создать приглашение</button><p id="newInvite" class="invite-code"></p></div>
         </div>
       </section>
-      <footer>Mi Fitness · Europe/Moscow <span>Ваши данные изолированы и доступны только вашему аккаунту.</span></footer>
+      <footer>ogd · Europe/Moscow <span>Ваши данные изолированы и доступны только вашему аккаунту.</span></footer>
     </section>
   </div>
 
-  <dialog id="importDialog" class="dialog"><form id="importForm"><button class="dialog-close" type="button" data-close>×</button><div class="eyebrow">ИМПОРТ ДАННЫХ</div><h2>Архив Mi Fitness</h2><p class="muted">Выберите ZIP и введите пароль архива. Файл не распаковывается в общую папку.</p><label>ZIP-файл<input name="file" type="file" accept=".zip,application/zip" required></label><label>Пароль архива<input name="password" type="password" autocomplete="off" required></label><div class="dialog-actions"><button class="btn outline" type="button" data-close>Отмена</button><button class="btn primary" type="submit">Импортировать</button></div><p class="error" id="importError"></p></form></dialog>
+  <dialog id="importDialog" class="dialog"><form id="importForm"><button class="dialog-close" type="button" data-close>×</button><div class="eyebrow">ИМПОРТ ДАННЫХ</div><h2>Архив данных</h2><p class="muted">Выберите ZIP и введите пароль архива. Файл не распаковывается в общую папку.</p><label>ZIP-файл<input name="file" type="file" accept=".zip,application/zip" required></label><label>Пароль архива<input name="password" type="password" autocomplete="off" required></label><div class="dialog-actions"><button class="btn outline" type="button" data-close>Отмена</button><button class="btn primary" type="submit">Импортировать</button></div><p class="error" id="importError"></p></form></dialog>
   <dialog id="detailDialog" class="dialog detail-dialog"><button class="dialog-close" type="button" data-close>×</button><div id="workoutDetail"></div></dialog>
   <div id="toast" class="toast" role="status"></div>
   <script src="/app.js" defer></script>

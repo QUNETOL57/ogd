@@ -20,14 +20,14 @@ from sqlalchemy import BigInteger, Boolean, Date, DateTime, Float, ForeignKey, I
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import DeclarativeBase, Session, mapped_column, sessionmaker
 
-from .importer import archive_digest, iter_mifitness_zip
+from .importer import archive_digest, iter_health_zip
 
 BASE = Path(__file__).parent
 TZ = ZoneInfo("Europe/Moscow")
 DB_URL = os.environ["DATABASE_URL"]
 engine = create_engine(DB_URL, pool_pre_ping=True)
 SessionLocal = sessionmaker(engine, expire_on_commit=False)
-app = FastAPI(title="Mi Fitness · Open Gym", docs_url=None, redoc_url=None)
+app = FastAPI(title="ogd — openGym dashboard", docs_url=None, redoc_url=None)
 AUTH_ATTEMPTS = {}
 
 
@@ -325,7 +325,7 @@ def share(body: ShareChoice, user: User = Depends(current_user), db: Session = D
 @app.post("/api/import")
 def import_zip(request: Request, file: UploadFile = File(...), password: str = Form(...), user: User = Depends(current_user), db: Session = Depends(get_db)):
     if not file.filename or not file.filename.lower().endswith(".zip"):
-        raise HTTPException(400, "Загрузите ZIP-архив Mi Fitness")
+        raise HTTPException(400, "Загрузите ZIP-архив с данными")
     if file.size and file.size > 500 * 1024 * 1024:
         raise HTTPException(413, "Максимальный размер архива — 500 МБ")
     digest = archive_digest(file.file)
@@ -334,7 +334,7 @@ def import_zip(request: Request, file: UploadFile = File(...), password: str = F
     metric_count = workout_count = 0
     metric_batch = []
     try:
-        for kind, item in iter_mifitness_zip(file.file, password):
+        for kind, item in iter_health_zip(file.file, password):
             if kind == "metric":
                 metric_batch.append({
                     "user_id": user.id, "key": item["key"], "sample_ts": item["timestamp"],
@@ -354,7 +354,7 @@ def import_zip(request: Request, file: UploadFile = File(...), password: str = F
         if metric_batch:
             db.execute(insert(Metric).values(metric_batch).on_conflict_do_nothing(constraint="uq_metrics_user_key_sample_ts_payload_hash"))
         if not metric_count and not workout_count:
-            raise ValueError("В архиве не найдены данные Mi Fitness")
+            raise ValueError("В архиве не найдены данные здоровья")
         db.add(ImportBatch(user_id=user.id, digest=digest, file_name=Path(file.filename).name[:255]))
         db.commit()
     except (RuntimeError, zipfile.BadZipFile, zipfile.LargeZipFile, OSError) as exc:
@@ -438,7 +438,7 @@ def workouts(period: str = "all", user: User = Depends(current_user), db: Sessio
         nearby = gym_starts[max(0, pos - 1):pos + 1]
         match_start = min((stamp for stamp in nearby if abs(stamp - workout.start_ts) <= 30 * 60), key=lambda stamp: abs(stamp - workout.start_ts), default=None)
         match = gym_by_start.get(match_start)
-        result.append({"id": workout.id, "name": workout.name, "kind": workout.kind, "source": "xiaomi", "start_ts": workout.start_ts, "duration_s": workout.duration_s, "calories": workout.calories, "distance_m": workout.distance_m, "avg_hr": workout.avg_hr, "min_hr": workout.min_hr, "max_hr": workout.max_hr, "swolf": workout.swolf, "gym": {"id": match.id, "name": match.name, "start_ts": match.start_ts, "end_ts": match.end_ts, "detail": match.detail} if match else None})
+        result.append({"id": workout.id, "name": workout.name, "kind": workout.kind, "source": "import", "start_ts": workout.start_ts, "duration_s": workout.duration_s, "calories": workout.calories, "distance_m": workout.distance_m, "avg_hr": workout.avg_hr, "min_hr": workout.min_hr, "max_hr": workout.max_hr, "swolf": workout.swolf, "gym": {"id": match.id, "name": match.name, "start_ts": match.start_ts, "end_ts": match.end_ts, "detail": match.detail} if match else None})
     for gym in gym_rows:
         pos = bisect_left(mi_starts, gym.start_ts)
         nearby = mi_starts[max(0, pos - 1):pos + 1]

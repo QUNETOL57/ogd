@@ -3,7 +3,7 @@ services:
     build: .
     restart: unless-stopped
     environment:
-      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-mifitness}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@db:5432/${POSTGRES_DB:-mifitness}
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-ogd}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@db:5432/${POSTGRES_DB:-ogd}
       APP_ORIGIN: ${APP_ORIGIN:?Set APP_ORIGIN to the public HTTPS URL}
       COOKIE_SECURE: "1"
       BOOTSTRAP_INVITE: ${BOOTSTRAP_INVITE:-}
@@ -25,8 +25,8 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-mifitness}
-      POSTGRES_USER: ${POSTGRES_USER:-mifitness}
+      POSTGRES_DB: ${POSTGRES_DB:-ogd}
+      POSTGRES_USER: ${POSTGRES_USER:-ogd}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
       TZ: Europe/Moscow
     volumes:

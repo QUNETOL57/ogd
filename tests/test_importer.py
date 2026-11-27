@@ -4,7 +4,7 @@ import json
 import unittest
 import zipfile
 
-from app.importer import iter_mifitness_zip
+from app.importer import iter_health_zip
 
 
 class ImporterTest(unittest.TestCase):
@@ -27,7 +27,7 @@ class ImporterTest(unittest.TestCase):
             z.writestr("x_hlth_center_sport_record.csv", sport.getvalue())
         archive.seek(0)
 
-        rows = list(iter_mifitness_zip(archive, "not-needed-for-plain-zip"))
+        rows = list(iter_health_zip(archive, "not-needed-for-plain-zip"))
         metrics = [row for kind, row in rows if kind == "metric"]
         workouts = [row for kind, row in rows if kind == "workout"]
 
