@@ -1,5 +1,5 @@
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
-const state={user:null,period:'week',daily:[],heatDaily:[],workouts:[],allWorkouts:null,heatWorkouts:[],view:'dashboard',authMode:'login',invite:null,hm:'steps',woCat:'all'};
+const state={user:null,period:'all',daily:[],heatDaily:[],workouts:[],allWorkouts:null,heatWorkouts:[],view:'dashboard',authMode:'login',invite:null,hm:'steps',woCat:'all'};
 const colors={blue:'#f74f9e',green:'#00ceb3',amber:'#fe9a00',purple:'#b48cff',red:'#fb414a',cyan:'#00ceb3',muted:'#9a9a9a',border:'#191919'};
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=n=>Number(n||0).toLocaleString('ru-RU');
@@ -183,13 +183,15 @@ function renderHeatmap(){
     cells.push({iso,col:Math.floor((dt-start)/(7*86400000)),row:(dt.getUTCDay()+6)%7,d:new Date(dt)});
   }
   const cols=(cells.length?cells[cells.length-1].col:52)+1;
-  const size=9.5,gap=2,left=22,top=16;
-  const needW=Math.max(left+cols*(size+gap)+4,$('#heatmapChart').parentElement.clientWidth||320);
-  const d=setupCanvas('heatmapChart',needW);if(!d)return;
+  const gap=2,left=22,top=16;
+  const avail=Math.max(240,($('#heatmapChart').parentElement.clientWidth||320)-4);
+  const size=Math.max(3,Math.min(9.5,(avail-left)/Math.max(1,cols)-gap));
+  const d=setupCanvas('heatmapChart');if(!d)return;
   const{ctx}=d,pal=palette();
+  const labelSize=Math.max(7.5,Math.min(9.5,size));
   const byDay=new Map(daily.map(r=>[r.date,r])),woByDay=new Map();
   wos.forEach(w=>{const day=isoDate(w.start_ts);if(!woByDay.has(day))woByDay.set(day,[]);woByDay.get(day).push(w)});
-  ctx.fillStyle=pal.muted;ctx.font='9.5px sans-serif';
+  ctx.fillStyle=pal.muted;ctx.font=labelSize+'px sans-serif';
   ['Пн','','Ср','','Пт','','Вс'].forEach((lbl,r)=>{if(lbl)ctx.fillText(lbl,0,top+r*(size+gap)+8)});
   const MONTHS=['Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя','Дек'];
   let lastMonth=-1;
@@ -268,7 +270,7 @@ function renderSports(wos){
 function renderMonthlyWorkouts(){
   const d=setupCanvas('monthlyWorkoutsChart');if(!d)return;
   const{canvas,ctx,w,h}=d,pal=palette(),pad={l:32,r:8,t:10,b:24},legend=$('#monthlyWorkoutLegend');
-  const wos=state.allWorkouts??state.workouts;
+  const wos=workoutsForPeriod();
   if(!wos.length){legend.innerHTML='';drawEmpty(ctx,w,h,pal);canvas.onmousemove=null;return}
   const latest=wos.reduce((a,x)=>Math.max(a,x.start_ts),0),anchor=monthKey(latest),[ay,am]=anchor.split('-').map(Number);
   const months=Array.from({length:12},(_,i)=>{const n=ay*12+(am-1)-(11-i),y=Math.floor(n/12),m=n%12+1;return`${y}-${String(m).padStart(2,'0')}`});
@@ -567,6 +569,6 @@ async function loadGymStatus(){try{const s=await api('/api/opengym/status'),conn
 async function submitGym(e){e.preventDefault();const data=Object.fromEntries(new FormData(e.currentTarget));try{const result=await api('/api/opengym/connect',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});toast(`Подключён профиль ${result.profile}`);e.currentTarget.reset();e.currentTarget.base_url.value=data.base_url;await loadGymStatus();await syncGym()}catch(err){notice(err.message,true)}}
 async function syncGym(){try{const result=await api('/api/opengym/sync',{method:'POST'});toast(`Синхронизировано тренировок Open Gym: ${result.workouts}`);await loadWorkouts();await loadGymStatus()}catch(err){notice(err.message,true)}}
 document.addEventListener('click',async e=>{const nav=e.target.closest('[data-view]');if(nav)return changeView(nav.dataset.view);const goto=e.target.closest('[data-goto]');if(goto)return changeView(goto.dataset.goto);const period=e.target.closest('[data-period]');if(period){state.period=period.dataset.period;$$('#periods button').forEach(b=>b.classList.toggle('active',b===period));return loadDashboard()}if(e.target.closest('#importOpen,#importOpen2'))return openImport();if(e.target.closest('[data-close]'))return e.target.closest('dialog').close();if(e.target.closest('#importStatusClose')){$('#importStatus').hidden=true;return}if(e.target.closest('#gymSync'))return syncGym();if(e.target.closest('#gymReplace')){$('#gymForm').hidden=false;$('#gymState').hidden=true;$('#gymActions').hidden=true;$('#gymForm [name=token]').value='';$('#gymConnect').textContent='Сохранить токен';$('#gymForm [name=token]').focus();return}if(e.target.closest('#gymDisconnect')){try{await api('/api/opengym/connect',{method:'DELETE'});toast('Open Gym отключён');await loadWorkouts();await loadGymStatus()}catch(err){notice(err.message,true)}}if(e.target.closest('#inviteCreate')){try{const d=await api('/api/invites',{method:'POST'}),link=$('#newInvite'),meta=$('#inviteMeta');link.href=d.url;link.textContent=d.url;link.hidden=false;meta.textContent=`Ссылка действует до ${new Date(d.expires_at).toLocaleString('ru-RU',{timeZone:'Europe/Moscow'})}`;meta.hidden=false;try{await navigator.clipboard?.writeText(d.url);toast('Ссылка скопирована')}catch{toast('Ссылка создана')}}catch(err){notice(err.message,true)}}if(e.target.closest('#logout,#logoutMobile')){await api('/api/logout',{method:'POST'});location.reload()}});
-$('#authForm').addEventListener('submit',loginForm);$('#importForm').addEventListener('submit',submitImport);$('#gymForm').addEventListener('submit',submitGym);$('#workoutPeriod').addEventListener('change',loadWorkouts);$('#shareToggle').addEventListener('change',async e=>{try{await api('/api/preferences/sharing',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({enabled:e.target.checked})});state.user.share_comparison=e.target.checked;toast(e.target.checked?'Согласие на сравнение включено':'Согласие отозвано');if(state.view==='compare')renderCompare(await api('/api/compare'))}catch(err){e.target.checked=!e.target.checked;notice(err.message,true)}});window.addEventListener('resize',()=>{if(!$('#app').hidden&&state.view==='dashboard')renderAnalytics()});window.addEventListener('orientationchange',()=>setTimeout(()=>{if(!$('#app').hidden&&state.view==='dashboard')renderAnalytics()},220));$('#hmPills').addEventListener('click',e=>{const btn=e.target.closest('button[data-hm]');if(!btn)return;state.hm=btn.dataset.hm;$$('#hmPills .pill').forEach(b=>b.classList.toggle('active',b===btn));renderHeatmap()});
-$('#woFilter').addEventListener('click',e=>{const btn=e.target.closest('button[data-cat]');if(!btn)return;state.woCat=btn.dataset.cat;$$('#woFilter .pill').forEach(b=>b.classList.toggle('active',b===btn));renderWorkoutsTable(workoutsForPeriod())});
+$('#authForm').addEventListener('submit',loginForm);$('#importForm').addEventListener('submit',submitImport);$('#gymForm').addEventListener('submit',submitGym);$('#workoutPeriod').addEventListener('change',loadWorkouts);$('#shareToggle').addEventListener('change',async e=>{try{await api('/api/preferences/sharing',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({enabled:e.target.checked})});state.user.share_comparison=e.target.checked;toast(e.target.checked?'Согласие на сравнение включено':'Согласие отозвано');if(state.view==='compare')renderCompare(await api('/api/compare'))}catch(err){e.target.checked=!e.target.checked;notice(err.message,true)}});window.addEventListener('resize',()=>{if(!$('#app').hidden&&state.view==='dashboard')renderAnalytics()});window.addEventListener('orientationchange',()=>setTimeout(()=>{if(!$('#app').hidden&&state.view==='dashboard')renderAnalytics()},220));$('#hmPills').addEventListener('click',e=>{const btn=e.target.closest('button[data-hm]');if(!btn)return;state.hm=btn.dataset.hm;$$('#hmPills button').forEach(b=>b.classList.toggle('active',b===btn));renderHeatmap()});
+$('#woFilter').addEventListener('click',e=>{const btn=e.target.closest('button[data-cat]');if(!btn)return;state.woCat=btn.dataset.cat;$$('#woFilter button').forEach(b=>b.classList.toggle('active',b===btn));renderWorkoutsTable(workoutsForPeriod())});
 boot();

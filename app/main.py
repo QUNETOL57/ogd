@@ -420,7 +420,7 @@ def _period_start(period, last_date):
 
 
 @app.get("/api/dashboard")
-def dashboard(period: str = "week", user: User = Depends(current_user), db: Session = Depends(get_db)):
+def dashboard(period: str = "all", user: User = Depends(current_user), db: Session = Depends(get_db)):
     last_date = db.scalar(select(func.max(Metric.local_date)).where(Metric.user_id == user.id))
     start = _period_start(period, last_date)
     query = select(Metric.local_date, Metric.key, func.sum(Metric.value), func.avg(Metric.value), func.min(Metric.value), func.max(Metric.value)).where(Metric.user_id == user.id)

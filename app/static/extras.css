@@ -197,7 +197,7 @@ input[type=file]:focus-visible{outline:none;border-color:var(--blue);box-shadow:
 }
 
 :root{--chart-1:#f74f9e;--chart-2:#00ceb3;--chart-3:#fe9a00;--chart-4:#b48cff;--chart-5:#fb414a;--chart-6:#9be700}
-.heatmap-wrap{overflow-x:auto;padding-bottom:2px;overscroll-behavior-x:contain}
+.heatmap-wrap{overflow:hidden;padding-bottom:2px}
 .panel-head .pills{flex-wrap:wrap}
 .rec-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
 .rec{padding:10px;border:1px solid var(--border);border-radius:8px;background:#111}
@@ -227,3 +227,5 @@ input[type=file]:focus-visible{outline:none;border-color:var(--blue);box-shadow:
   #view-dashboard .panel-head p{font-size:11px}
   #view-dashboard .legend{font-size:11px}
 }
+
+#heatmapChart{display:block;width:100%;height:126px}
