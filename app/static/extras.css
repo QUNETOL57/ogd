@@ -52,7 +52,7 @@
     display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
     border-radius:10px;line-height:1.1;text-align:center;
   }
-  .nav-item span{font-size:18px;width:auto;line-height:1}
+  .nav-icon{width:20px;height:20px}
   .main-area{margin:0;padding:0 13px calc(84px + env(safe-area-inset-bottom));max-width:none}
   .view{gap:12px}
   .view>*{min-width:0}
@@ -139,7 +139,7 @@
 @media(max-width:430px){
   .nav{gap:1px}
   .nav-item{min-width:42px;padding:5px 2px;font-size:10px}
-  .nav-item span{font-size:16px}
+  .nav-icon{width:18px;height:18px}
   .top-actions .btn{font-size:10px;padding:7px 9px}
   .topbar h1{font-size:17px}
   .toolbar h2{font-size:18px}

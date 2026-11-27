@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#000000">
   <title>openGym dashboard</title>
-  <link rel="stylesheet" href="/styles.css?v=6">
-  <link rel="stylesheet" href="/extras.css?v=6">
+  <link rel="stylesheet" href="/styles.css?v=7">
+  <link rel="stylesheet" href="/extras.css?v=7">
 </head>
 <body>
   <main id="auth" class="auth-wrap" hidden>
@@ -42,10 +42,10 @@
       </a>
       <div class="side-label">РАЗДЕЛЫ</div>
       <nav class="nav">
-        <button class="nav-item active" data-view="dashboard"><span>◫</span>Обзор</button>
-        <button class="nav-item" data-view="workouts"><span>⌁</span>Тренировки</button>
-        <button class="nav-item" data-view="compare"><span>⇄</span>Сравнение</button>
-        <button class="nav-item" data-view="settings"><span>⚙</span>Настройки</button>
+        <button class="nav-item active" data-view="dashboard"><span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg></span>Обзор</button>
+        <button class="nav-item" data-view="workouts"><span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 7v10M3.5 9.5v5M17.5 7v10M20.5 9.5v5M6.5 12h11"/></svg></span>Тренировки</button>
+        <button class="nav-item" data-view="compare"><span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3 4 7l4 4M4 7h16"/><path d="m16 21 4-4-4-4M20 17H4"/></svg></span>Сравнение</button>
+        <button class="nav-item" data-view="settings"><span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h5M13 6h7M4 12h11M19 12h1M4 18h3M11 18h9"/><circle cx="11" cy="6" r="2"/><circle cx="17" cy="12" r="2"/><circle cx="9" cy="18" r="2"/></svg></span>Настройки</button>
       </nav>
       <div class="side-bottom"><div class="user-mini"><span class="avatar" id="avatar">O</span><span><b id="userName"></b><small>Личный профиль</small></span></div><button id="logout" class="text-btn">Выйти</button></div>
     </aside>
@@ -55,7 +55,7 @@
       <div id="notice" class="notice" role="status" hidden></div>
 
       <section class="view" id="view-dashboard">
-        <div class="toolbar"><div><h2>Ваше здоровье</h2><p class="muted" id="rangeCaption">—</p></div><div class="pills" id="periods"><button data-period="day">День</button><button data-period="week">Неделя</button><button data-period="month">Месяц</button><button data-period="year" class="active">Год</button><button data-period="all">Всё время</button></div></div>
+        <div class="toolbar"><div><h2>Ваше здоровье</h2><p class="muted" id="rangeCaption">—</p></div><div class="pills" id="periods"><button data-period="day">День</button><button data-period="week" class="active">Неделя</button><button data-period="month">Месяц</button><button data-period="year">Год</button><button data-period="all">Всё время</button></div></div>
         <div class="kpis" id="kpis"></div>
         <div class="panel"><div class="panel-head"><div><h3>Шаги по дням и скользящее среднее (14 дн.)</h3><p class="muted">Дневные значения, среднее за 14 дней и цель 10 000 шагов</p></div><div class="legend"><span><i class="dot blue"></i>Шаги</span><span><i class="dot amber"></i>Среднее 14 дн.</span><span><i class="dot cyan"></i>Цель</span></div></div><div class="chart-box"><canvas id="activityChart"></canvas></div></div>
         <div class="grid-2">
@@ -110,6 +110,6 @@
   <dialog id="importDialog" class="dialog"><form id="importForm"><button class="dialog-close" type="button" data-close>×</button><div class="eyebrow">ИМПОРТ ДАННЫХ</div><h2>Архив данных</h2><p class="muted">Выберите ZIP и введите пароль архива. Файл не распаковывается в общую папку.</p><label>ZIP-файл<input name="file" type="file" accept=".zip,application/zip" required></label><label>Пароль архива<input name="password" type="password" autocomplete="off" required></label><div class="dialog-actions"><button class="btn outline" type="button" data-close>Отмена</button><button class="btn primary" type="submit">Импортировать</button></div><p class="error" id="importError"></p></form></dialog>
   <dialog id="detailDialog" class="dialog detail-dialog"><button class="dialog-close" type="button" data-close>×</button><div id="workoutDetail"></div></dialog>
   <div id="toast" class="toast" role="status"></div>
-  <script src="/app.js?v=5" defer></script>
+  <script src="/app.js?v=7" defer></script>
 </body>
 </html>
