@@ -452,6 +452,20 @@ def _gym_match(db, user_id, workout):
     return {"id": candidate.id, "name": candidate.name, "start_ts": candidate.start_ts, "end_ts": candidate.end_ts, "detail": candidate.detail}
 
 
+def _raw_number(raw, key):
+    value = raw.get(key) if isinstance(raw, dict) else None
+    return float(value) if isinstance(value, (int, float)) else None
+
+
+def _workout_zones(raw):
+    if not isinstance(raw, dict):
+        return None
+    keys = ("hrm_warm_up_duration", "hrm_fat_burning_duration", "hrm_aerobic_duration", "hrm_anaerobic_duration", "hrm_extreme_duration")
+    if not any(raw.get(key) is not None for key in keys):
+        return None
+    return [round(float(raw.get(key) or 0) / 60, 1) for key in keys]
+
+
 @app.get("/api/workouts")
 def workouts(period: str = "all", user: User = Depends(current_user), db: Session = Depends(get_db)):
     latest = max(filter(None, [
@@ -480,13 +494,13 @@ def workouts(period: str = "all", user: User = Depends(current_user), db: Sessio
         nearby = gym_starts[max(0, pos - 1):pos + 1]
         match_start = min((stamp for stamp in nearby if abs(stamp - workout.start_ts) <= 30 * 60), key=lambda stamp: abs(stamp - workout.start_ts), default=None)
         match = gym_by_start.get(match_start)
-        result.append({"id": workout.id, "name": workout.name, "kind": workout.kind, "source": "import", "start_ts": workout.start_ts, "duration_s": workout.duration_s, "calories": workout.calories, "distance_m": workout.distance_m, "avg_hr": workout.avg_hr, "min_hr": workout.min_hr, "max_hr": workout.max_hr, "swolf": workout.swolf, "gym": {"id": match.id, "name": match.name, "start_ts": match.start_ts, "end_ts": match.end_ts, "detail": match.detail} if match else None})
+        result.append({"id": workout.id, "name": workout.name, "kind": workout.kind, "source": "import", "start_ts": workout.start_ts, "duration_s": workout.duration_s, "calories": workout.calories, "distance_m": workout.distance_m, "avg_hr": workout.avg_hr, "min_hr": workout.min_hr, "max_hr": workout.max_hr, "swolf": workout.swolf, "zones": _workout_zones(workout.raw), "load": _raw_number(workout.raw, "train_load"), "vit": _raw_number(workout.raw, "vitality"), "gym": {"id": match.id, "name": match.name, "start_ts": match.start_ts, "end_ts": match.end_ts, "detail": match.detail} if match else None})
     for gym in gym_rows:
         pos = bisect_left(mi_starts, gym.start_ts)
         nearby = mi_starts[max(0, pos - 1):pos + 1]
         if any(abs(start - gym.start_ts) <= 30 * 60 for start in nearby):
             continue
-        result.append({"id": f"gym:{gym.id}", "name": gym.name, "kind": "opengym", "source": "opengym", "start_ts": gym.start_ts, "duration_s": max(0, gym.end_ts - gym.start_ts), "calories": None, "distance_m": None, "avg_hr": None, "min_hr": None, "max_hr": None, "swolf": None, "gym": {"id": gym.id, "name": gym.name, "start_ts": gym.start_ts, "end_ts": gym.end_ts, "detail": gym.detail}})
+        result.append({"id": f"gym:{gym.id}", "name": gym.name, "kind": "opengym", "source": "opengym", "start_ts": gym.start_ts, "duration_s": max(0, gym.end_ts - gym.start_ts), "calories": None, "distance_m": None, "avg_hr": None, "min_hr": None, "max_hr": None, "swolf": None, "zones": None, "load": None, "vit": None, "gym": {"id": gym.id, "name": gym.name, "start_ts": gym.start_ts, "end_ts": gym.end_ts, "detail": gym.detail}})
     result.sort(key=lambda w: w["start_ts"], reverse=True)
     return {"workouts": result[:1000]}
 

@@ -195,3 +195,35 @@ input[type=file]:focus-visible{outline:none;border-color:var(--blue);box-shadow:
   .import-table th,.import-table td{padding:8px 6px}
   .import-table .import-progress{min-width:76px}
 }
+
+:root{--chart-1:#f74f9e;--chart-2:#00ceb3;--chart-3:#fe9a00;--chart-4:#b48cff;--chart-5:#fb414a;--chart-6:#9be700}
+.heatmap-wrap{overflow-x:auto;padding-bottom:2px;overscroll-behavior-x:contain}
+.panel-head .pills{flex-wrap:wrap}
+.rec-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.rec{padding:10px;border:1px solid var(--border);border-radius:8px;background:#111}
+.rec-k{font-size:11px;color:var(--muted)}
+.rec-v{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums;margin-top:2px}
+.rec-d{font-size:10px;color:var(--muted);margin-top:2px}
+.wo-wrap{overflow-x:auto}
+.wo-tbl{width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums}
+.wo-tbl th{text-align:left;font-weight:500;font-size:11px;color:var(--muted);padding:4px 6px 6px;border-bottom:1px solid var(--border);white-space:nowrap}
+.wo-tbl td{padding:7px 6px;border-bottom:1px solid var(--border);white-space:nowrap}
+.wo-tbl tr:last-child td{border-bottom:none}
+.tip{position:fixed;pointer-events:none;z-index:50;background:#111;color:#d4d4d4;border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:11.5px;line-height:1.4;box-shadow:0 4px 14px #0008;display:none;max-width:250px;white-space:pre-line}
+@media(max-width:760px){
+  .wo-tbl th,.wo-tbl td{padding:6px 5px}
+  .rec-v{font-size:14px}
+}
+
+#view-dashboard .chart-box{height:220px}
+#view-dashboard .chart-box.short{height:180px}
+#view-dashboard .panel-head h3{font-size:17px}
+#view-dashboard .panel-head p{font-size:12px}
+#view-dashboard .legend{font-size:12px}
+@media(max-width:760px){
+  #view-dashboard .chart-box{height:190px}
+  #view-dashboard .chart-box.short{height:170px}
+  #view-dashboard .panel-head h3{font-size:15px}
+  #view-dashboard .panel-head p{font-size:11px}
+  #view-dashboard .legend{font-size:11px}
+}
