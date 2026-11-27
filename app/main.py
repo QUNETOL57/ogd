@@ -20,7 +20,7 @@ from sqlalchemy import BigInteger, Boolean, Date, DateTime, Float, ForeignKey, I
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import DeclarativeBase, Session, mapped_column, sessionmaker
 
-from .importer import archive_digest, iter_health_zip
+from .importer import archive_digest, exercise_aliases, exercise_names, iter_health_zip
 
 BASE = Path(__file__).parent
 TZ = ZoneInfo("Europe/Moscow")
@@ -512,7 +512,8 @@ def sync_gym(user: User = Depends(current_user), db: Session = Depends(get_db)):
         state = response.json().get("state") or {}
     except (httpx.HTTPError, InvalidToken, ValueError) as exc:
         raise HTTPException(502, "Не удалось получить данные Open Gym") from exc
-    names = {item.get("id"): item.get("n") or item.get("name") for item in state.get("customEx", []) if isinstance(item, dict)}
+    names = exercise_names(state)
+    aliases = exercise_aliases(state)
     routines = {item.get("id"): item.get("name") for item in state.get("routines", []) if isinstance(item, dict)}
     imported = 0
     for item in state.get("workouts", []):
@@ -526,7 +527,8 @@ def sync_gym(user: User = Depends(current_user), db: Session = Depends(get_db)):
         detail = dict(item)
         for entry in detail.get("entries", []):
             if isinstance(entry, dict):
-                entry["exercise_name"] = names.get(entry.get("id"), entry.get("name", entry.get("id", "Упражнение")))
+                raw_id = str(entry.get("id") or "")
+                entry["exercise_name"] = entry.get("name") or names.get(raw_id) or names.get(aliases.get(raw_id, raw_id)) or raw_id or "Упражнение"
         external_id = str(item.get("id") or f'{start_ts}:{item.get("name", "")}')[:120]
         name = str(item.get("name") or routines.get(item.get("routineId")) or "Тренировка Open Gym")[:120]
         values = {"user_id": user.id, "external_id": external_id, "start_ts": start_ts, "end_ts": end_ts, "name": name, "detail": detail}

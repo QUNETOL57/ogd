@@ -4,10 +4,12 @@ import io
 import json
 import zipfile
 from datetime import date, datetime, timezone
+from pathlib import Path
 from typing import BinaryIO
 from zoneinfo import ZoneInfo
 
 MOSCOW = ZoneInfo("Europe/Moscow")
+EXERCISE_NAMES = json.loads((Path(__file__).with_name("exercise_names.json")).read_text(encoding="utf-8"))
 METRIC_FIELDS = {
     "steps": ("steps",), "calories": ("calories",), "heart_rate": ("bpm",),
     "stress": ("stress",), "spo2": ("spo2",), "weight": ("weight",),
@@ -26,6 +28,36 @@ def archive_digest(file: BinaryIO) -> str:
 
 def _local_date(timestamp: int) -> date:
     return datetime.fromtimestamp(timestamp, MOSCOW).date()
+
+
+def _text_map(value):
+    if not isinstance(value, dict):
+        return {}
+    return {str(key): str(item) for key, item in value.items() if isinstance(item, (str, int)) and str(item).strip()}
+
+
+def exercise_names(state):
+    """OpenGym stores only exercise ids in workouts; resolve them from its catalog and overrides."""
+    names = dict(EXERCISE_NAMES)
+    for item in state.get("customEx") or []:
+        if isinstance(item, dict) and item.get("id"):
+            name = item.get("n") or item.get("name")
+            if name:
+                names[str(item["id"])] = str(name)
+    names.update(_text_map(state.get("exShownName")))
+    for routine in state.get("routines") or []:
+        if not isinstance(routine, dict):
+            continue
+        for item in routine.get("ex") or []:
+            if isinstance(item, dict) and item.get("id"):
+                name = item.get("n") or item.get("name")
+                if name:
+                    names[str(item["id"])] = str(name)
+    return names
+
+
+def exercise_aliases(state):
+    return _text_map(state.get("exAliases"))
 
 
 def iter_health_zip(file: BinaryIO, password: str):

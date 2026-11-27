@@ -4,7 +4,7 @@ import json
 import unittest
 import zipfile
 
-from app.importer import iter_health_zip
+from app.importer import exercise_names, iter_health_zip
 
 
 class ImporterTest(unittest.TestCase):
@@ -36,6 +36,17 @@ class ImporterTest(unittest.TestCase):
         self.assertEqual(len(workouts), 1)
         self.assertEqual(workouts[0]["calories"], 55)
         self.assertEqual(workouts[0]["avg_hr"], 125)
+
+    def test_exercise_names_come_from_catalog_and_overrides(self):
+        names = exercise_names({
+            "customEx": [{"id": "custom", "n": "Своё упражнение"}],
+            "exShownName": {"0085": "Моя тяга"},
+            "routines": [{"ex": [{"id": "0047", "n": "Жим из плана"}]}],
+        })
+        self.assertEqual(names["2259"], "walking on treadmill")
+        self.assertEqual(names["0085"], "Моя тяга")
+        self.assertEqual(names["custom"], "Своё упражнение")
+        self.assertEqual(names["0047"], "Жим из плана")
 
 
 if __name__ == "__main__":
