@@ -1,6 +1,26 @@
 .heat-cell.workout{outline:2px solid var(--blue);outline-offset:0}.workout-key{display:inline-block;width:9px;height:9px;border:2px solid var(--blue);border-radius:2px}.ex-en{color:var(--muted);font-weight:400;font-size:11px}
 .actions{flex-wrap:wrap}
-.gym-state{display:grid;gap:3px;padding:10px;border:1px solid #d1fae5;background:#f0fdf4;border-radius:8px}
-.gym-connected{display:flex;align-items:center;gap:7px;color:#047857;font-size:12px;font-weight:600}
-.gym-dot{width:7px;height:7px;border-radius:50%;background:#10b981;flex:none}
-.token-mask{font-family:ui-monospace,monospace;color:#475569}
+.gym-state{display:grid;gap:3px;padding:10px;border:1px solid #23d18b44;background:#23d18b0d;border-radius:8px}
+.gym-connected{display:flex;align-items:center;gap:7px;color:#23d18b;font-size:12px;font-weight:600}
+.gym-dot{width:7px;height:7px;border-radius:50%;background:#23d18b;flex:none}
+.token-mask{font-family:ui-monospace,monospace;color:#d4d4d4}
+.main-area{padding-right:28px;padding-left:28px}
+.view{gap:18px}
+.toolbar h2{font-size:22px}
+.panel{padding:22px 24px;border-radius:12px}
+.panel-head{margin-bottom:14px}
+.panel-head h3{font-size:19px}
+.panel-head p{font-size:13px}
+.legend{font-size:13px}
+.dot{width:11px;height:11px}
+.kpis{gap:12px}
+.kpi{padding:18px 20px;gap:6px;border-radius:12px}
+.kpi-label{font-size:15px}
+.kpi-val{font-size:28px}
+.kpi-note{font-size:13px}
+.chart-box{height:300px}
+.chart-box.short{height:220px}
+.grid-2{gap:16px}
+.heatmap{grid-template-rows:repeat(7,12px);grid-auto-columns:12px;gap:4px;min-height:120px}
+.heat-cell{width:12px;height:12px;border-radius:3px}
+@media(max-width:760px){.main-area{padding-right:13px;padding-left:13px}.view{gap:14px}.toolbar h2{font-size:18px}.panel{padding:16px}.panel-head h3{font-size:16px}.panel-head p{font-size:11px}.kpi{padding:13px 14px}.kpi-label{font-size:12px}.kpi-val{font-size:22px}.kpi-note{font-size:11px}.chart-box{height:230px}.chart-box.short{height:190px}.heatmap{grid-template-rows:repeat(7,9px);grid-auto-columns:9px;gap:3px}.heat-cell{width:9px;height:9px}}
