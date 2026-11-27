@@ -11,21 +11,18 @@
 <body>
   <main id="auth" class="auth-wrap" hidden>
     <section class="auth-card">
-      <p class="eyebrow">ЛИЧНАЯ АНАЛИТИКА</p>
       <h1 class="auth-logo" aria-label="openGym">
         <svg viewBox="80 169 352 174" aria-hidden="true"><path d="M80 242h352v28H80zM80 199h36v114H80zM131 169h47v174h-47zM334 169h47v174h-47zM396 199h36v114h-36z"/></svg>
         <span>open<span>Gym</span></span>
       </h1>
-      <p class="muted">Данные здоровья и тренировок — только для вас.</p>
-      <div class="auth-tabs"><button class="active" data-auth="login">Войти</button><button data-auth="register">Создать аккаунт</button></div>
       <form id="authForm">
         <label>Имя пользователя<input name="username" autocomplete="username" required minlength="2" maxlength="40"></label>
         <label>Пароль<input name="password" type="password" autocomplete="current-password" required minlength="12"></label>
-        <label id="inviteField" hidden>Код приглашения<input name="invite" autocomplete="off"></label>
+        <label id="confirmField" hidden>Повторите пароль<input name="confirm" type="password" autocomplete="new-password" minlength="12" disabled></label>
         <button class="btn primary full" type="submit" id="authSubmit">Войти</button>
       </form>
+      <p id="authSwitch" class="tiny muted" hidden>Уже есть аккаунт? <a href="/">Войти</a></p>
       <p id="authError" class="error" role="alert"></p>
-      <p class="tiny muted">Регистрация доступна по приглашению. Пароль — не короче 12 символов.</p>
     </section>
   </main>
 
@@ -80,7 +77,7 @@
         <div class="grid-2 settings-grid">
           <div class="panel"><h3>Импорт данных</h3><p class="muted">Загрузите ZIP-архив и введите пароль от него. Пароль используется только для чтения архива и не сохраняется.</p><button class="btn primary" id="importOpen2">Загрузить архив</button><div id="importHistory" class="tiny muted"></div></div>
           <div class="panel"><h3>Open Gym</h3><p class="muted">Подключите личный токен Open Gym с разрешением «Тренировки: просмотр». Токен будет зашифрован в базе данных.</p><form id="gymForm"><label>Адрес сервера<input name="base_url" value="https://opengym.qbav.online" required></label><label>Токен Open Gym<input name="token" type="password" placeholder="ogt_…" autocomplete="off" required></label><div class="actions"><button class="btn primary" type="submit">Подключить</button><button class="btn outline" type="button" id="gymSync">Синхронизировать</button><button class="text-btn danger-text" type="button" id="gymDisconnect">Отключить</button></div></form><p class="tiny muted">Создайте токен в Open Gym → Настройки → API-токены, только чтение тренировок.</p></div>
-          <div class="panel" id="adminPanel" hidden><h3>Приглашения</h3><p class="muted">Администратор может создать одноразовый код для нового участника.</p><button class="btn outline" id="inviteCreate">Создать приглашение</button><p id="newInvite" class="invite-code"></p></div>
+          <div class="panel" id="adminPanel" hidden><h3>Приглашения</h3><p class="muted">Ссылка действует 7 дней и работает один раз. Отправьте её новому участнику.</p><button class="btn outline" id="inviteCreate">Создать ссылку-приглашение</button><a id="newInvite" class="invite-code" target="_blank" rel="noopener" hidden></a><p id="inviteMeta" class="tiny muted" hidden></p></div>
         </div>
       </section>
       <footer>openGym dashboard · Europe/Moscow <span>Ваши данные изолированы и доступны только вашему аккаунту.</span></footer>

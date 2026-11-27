@@ -16,7 +16,7 @@ from cryptography.fernet import Fernet, InvalidToken
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
-from sqlalchemy import BigInteger, Boolean, Date, DateTime, Float, ForeignKey, Index, Integer, JSON, String, Text, UniqueConstraint, create_engine, func, select
+from sqlalchemy import BigInteger, Boolean, Date, DateTime, Float, ForeignKey, Index, Integer, JSON, String, Text, UniqueConstraint, create_engine, func, select, text
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import DeclarativeBase, Session, mapped_column, sessionmaker
 
@@ -24,6 +24,7 @@ from .importer import archive_digest, exercise_aliases, exercise_label, exercise
 
 BASE = Path(__file__).parent
 TZ = ZoneInfo("Europe/Moscow")
+INVITE_DAYS = 7
 DB_URL = os.environ["DATABASE_URL"]
 engine = create_engine(DB_URL, pool_pre_ping=True)
 SessionLocal = sessionmaker(engine, expire_on_commit=False)
@@ -52,6 +53,7 @@ class Invite(BaseModelDB):
     created_by = mapped_column(Integer, ForeignKey("users.id"))
     used_by = mapped_column(Integer, ForeignKey("users.id"))
     created_at = mapped_column(DateTime(timezone=True), server_default=func.now())
+    expires_at = mapped_column(DateTime(timezone=True))
 
 
 class LoginSession(BaseModelDB):
@@ -190,10 +192,16 @@ def _cookie(response, token):
     response.set_cookie("ogd_session", token, httponly=True, secure=os.getenv("COOKIE_SECURE", "0") == "1", samesite="lax", max_age=30 * 86400, path="/")
 
 
-class Credentials(BaseModel):
+class LoginInput(BaseModel):
+    username: str = Field(min_length=2, max_length=40)
+    password: str = Field(min_length=1, max_length=200)
+
+
+class RegisterInput(BaseModel):
     username: str = Field(min_length=2, max_length=40)
     password: str = Field(min_length=12, max_length=200)
-    invite: str = ""
+    confirm: str = Field(min_length=12, max_length=200)
+    invite: str = Field(min_length=1, max_length=64)
 
 
 class ShareChoice(BaseModel):
@@ -208,11 +216,14 @@ class GymInput(BaseModel):
 @app.on_event("startup")
 def startup():
     BaseModelDB.metadata.create_all(engine)
+    with engine.begin() as conn:
+        conn.execute(text("ALTER TABLE invites ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ"))
+        conn.execute(text("UPDATE invites SET expires_at = created_at + interval '7 days' WHERE expires_at IS NULL"))
     bootstrap = os.getenv("BOOTSTRAP_INVITE", "").strip()
     if bootstrap:
         with SessionLocal() as db:
             if not db.scalar(select(Invite.id).where(Invite.code_hash == _invite_hash(bootstrap))):
-                db.add(Invite(code_hash=_invite_hash(bootstrap)))
+                db.add(Invite(code_hash=_invite_hash(bootstrap), expires_at=datetime.now(timezone.utc) + timedelta(days=INVITE_DAYS)))
                 db.commit()
 
 
@@ -242,24 +253,31 @@ def health():
 
 
 @app.post("/api/register")
-def register(body: Credentials, request: Request, db: Session = Depends(get_db)):
+def register(body: RegisterInput, request: Request, db: Session = Depends(get_db)):
     _auth_gate(request)
+    if body.password != body.confirm:
+        raise HTTPException(400, "Пароли не совпадают")
     username = body.username.strip()
     if not username or any(ord(c) < 32 for c in username):
         raise HTTPException(400, "Укажите корректное имя")
-    invite = db.scalar(select(Invite).where(Invite.code_hash == _invite_hash(body.invite), Invite.used_by.is_(None)).with_for_update())
+    now = datetime.now(timezone.utc)
+    invite = db.scalar(select(Invite).where(
+        Invite.code_hash == _invite_hash(body.invite),
+        Invite.used_by.is_(None),
+        Invite.expires_at > now,
+    ).with_for_update())
     if not invite:
-        raise HTTPException(403, "Приглашение недействительно или уже использовано")
+        raise HTTPException(403, "Приглашение недействительно, уже использовано или истекло")
     if db.scalar(select(User.id).where(func.lower(User.username) == username.lower())):
         raise HTTPException(409, "Это имя уже занято")
     admin = db.scalar(select(User.id)) is None
     user = User(username=username, password_hash=_hash_secret(body.password), is_admin=admin)
     db.add(user)
     db.flush()
-    db.query(LoginSession).filter(LoginSession.expires_at < datetime.now(timezone.utc)).delete()
+    db.query(LoginSession).filter(LoginSession.expires_at < now).delete()
     invite.used_by = user.id
     token = secrets.token_urlsafe(32)
-    db.add(LoginSession(user_id=user.id, token_hash=hashlib.sha256(token.encode()).hexdigest(), expires_at=datetime.now(timezone.utc) + timedelta(days=30)))
+    db.add(LoginSession(user_id=user.id, token_hash=hashlib.sha256(token.encode()).hexdigest(), expires_at=now + timedelta(days=30)))
     db.commit()
     result = JSONResponse({"id": user.id, "username": user.username, "is_admin": user.is_admin})
     _cookie(result, token)
@@ -267,14 +285,15 @@ def register(body: Credentials, request: Request, db: Session = Depends(get_db))
 
 
 @app.post("/api/login")
-def login(body: Credentials, request: Request, db: Session = Depends(get_db)):
+def login(body: LoginInput, request: Request, db: Session = Depends(get_db)):
     _auth_gate(request)
     user = db.scalar(select(User).where(func.lower(User.username) == body.username.strip().lower()))
     if not user or not _verify_secret(body.password, user.password_hash):
         raise HTTPException(401, "Неверное имя или пароль")
     token = secrets.token_urlsafe(32)
-    db.query(LoginSession).filter(LoginSession.expires_at < datetime.now(timezone.utc)).delete()
-    db.add(LoginSession(user_id=user.id, token_hash=hashlib.sha256(token.encode()).hexdigest(), expires_at=datetime.now(timezone.utc) + timedelta(days=30)))
+    now = datetime.now(timezone.utc)
+    db.query(LoginSession).filter(LoginSession.expires_at < now).delete()
+    db.add(LoginSession(user_id=user.id, token_hash=hashlib.sha256(token.encode()).hexdigest(), expires_at=now + timedelta(days=30)))
     db.commit()
     result = JSONResponse({"id": user.id, "username": user.username, "is_admin": user.is_admin, "share_comparison": user.share_comparison})
     _cookie(result, token)
@@ -298,21 +317,43 @@ def me(user: User = Depends(current_user), db: Session = Depends(get_db)):
     return {"id": user.id, "username": user.username, "is_admin": user.is_admin, "share_comparison": user.share_comparison, "last_date": latest.isoformat() if latest else None}
 
 
+def _public_origin(request: Request):
+    origins = [item.strip().rstrip("/") for item in os.getenv("APP_ORIGIN", "").split(",") if item.strip()]
+    return origins[0] if origins else str(request.base_url).rstrip("/")
+
+
 @app.get("/api/invites")
 def list_invites(user: User = Depends(current_user), db: Session = Depends(get_db)):
     if not user.is_admin:
         raise HTTPException(403, "Только администратор может управлять приглашениями")
-    return {"invites": [{"created_at": row.created_at.isoformat(), "used": row.used_by is not None} for row in db.scalars(select(Invite).order_by(Invite.id.desc()).limit(30))]}
+    now = datetime.now(timezone.utc)
+    return {"invites": [{
+        "created_at": row.created_at.isoformat(),
+        "expires_at": row.expires_at.isoformat() if row.expires_at else None,
+        "used": row.used_by is not None,
+        "expired": not row.expires_at or row.expires_at <= now,
+    } for row in db.scalars(select(Invite).order_by(Invite.id.desc()).limit(30))]}
+
+
+@app.get("/api/invites/{code}")
+def invite_status(code: str, db: Session = Depends(get_db)):
+    invite = db.scalar(select(Invite).where(Invite.code_hash == _invite_hash(code)))
+    now = datetime.now(timezone.utc)
+    return {
+        "valid": bool(invite and invite.used_by is None and invite.expires_at and invite.expires_at > now),
+        "expires_at": invite.expires_at.isoformat() if invite and invite.expires_at else None,
+    }
 
 
 @app.post("/api/invites")
-def create_invite(user: User = Depends(current_user), db: Session = Depends(get_db)):
+def create_invite(request: Request, user: User = Depends(current_user), db: Session = Depends(get_db)):
     if not user.is_admin:
         raise HTTPException(403, "Недостаточно прав")
     code = secrets.token_hex(8).upper()
-    db.add(Invite(code_hash=_invite_hash(code), created_by=user.id))
+    expires_at = datetime.now(timezone.utc) + timedelta(days=INVITE_DAYS)
+    db.add(Invite(code_hash=_invite_hash(code), created_by=user.id, expires_at=expires_at))
     db.commit()
-    return {"code": code}
+    return {"code": code, "url": f"{_public_origin(request)}/join/{code}", "expires_at": expires_at.isoformat()}
 
 
 @app.put("/api/preferences/sharing")
