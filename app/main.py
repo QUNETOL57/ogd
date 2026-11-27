@@ -153,9 +153,9 @@ def _invite_hash(code: str) -> str:
 def _require_origin(request: Request):
     if request.method in {"GET", "HEAD", "OPTIONS"}:
         return
-    expected = os.getenv("APP_ORIGIN", "").rstrip("/")
+    expected = {item.strip().rstrip("/") for item in os.getenv("APP_ORIGIN", "").split(",") if item.strip()}
     origin = request.headers.get("origin")
-    if origin and expected and origin.rstrip("/") != expected:
+    if origin and expected and origin.rstrip("/") not in expected:
         raise HTTPException(403, "Запрос с другого сайта отклонён")
     if request.headers.get("sec-fetch-site") == "cross-site":
         raise HTTPException(403, "Запрос с другого сайта отклонён")
