@@ -31,7 +31,15 @@
 
   <div id="app" class="app-shell" hidden>
     <aside class="sidebar">
-      <a class="brand" href="#"><span>openGym dashboard</span></a>
+      <a class="brand" href="#" aria-label="openGym dashboard">
+        <span class="brand-logo">
+          <span class="logo-line">
+            <svg viewBox="80 169 352 174" aria-hidden="true"><path d="M80 242h352v28H80zM80 199h36v114H80zM131 169h47v174h-47zM334 169h47v174h-47zM396 199h36v114h-36z"/></svg>
+            <span class="logo-word">open<span>Gym</span></span>
+          </span>
+          <span class="logo-caption">dashboard</span>
+        </span>
+      </a>
       <div class="side-label">РАЗДЕЛЫ</div>
       <nav class="nav">
         <button class="nav-item active" data-view="dashboard"><span>◫</span>Обзор</button>
@@ -79,7 +87,7 @@
         <div class="toolbar"><div><h2>Настройки</h2><p class="muted">Импорт данных и подключения</p></div></div>
         <div class="grid-2 settings-grid">
           <div class="panel"><h3>Импорт данных</h3><p class="muted">Загрузите ZIP-архив и введите пароль от него. Пароль используется только для чтения архива и не сохраняется.</p><button class="btn primary" id="importOpen2">Загрузить архив</button><div id="importHistory" class="tiny muted"></div></div>
-          <div class="panel"><h3>Open Gym</h3><p class="muted">Подключите личный токен Open Gym с разрешением «Тренировки: просмотр». Токен будет зашифрован в базе данных.</p><form id="gymForm"><label>Адрес сервера<input name="base_url" value="https://opengym.qbav.online" required></label><label>Токен Open Gym<input name="token" type="password" placeholder="ogt_…" autocomplete="off" required></label><div class="actions"><button class="btn primary" type="submit">Подключить</button><button class="btn outline" type="button" id="gymSync">Синхронизировать</button><button class="text-btn danger-text" type="button" id="gymDisconnect">Отключить</button></div></form><p class="tiny muted">Создайте токен в Open Gym → Настройки → API-токены, только чтение тренировок.</p></div>
+          <div class="panel"><h3>Open Gym</h3><p class="muted">Подключите личный токен Open Gym с разрешением «Тренировки: просмотр». Токен хранится в зашифрованном виде.</p><div class="gym-state" id="gymState" hidden><div class="gym-connected"><span class="gym-dot"></span>Токен сохранён</div><p class="tiny muted">Сервер: <span id="gymServer"></span></p><p class="tiny muted">Токен: <span class="token-mask">ogt_••••••••</span></p><p class="tiny muted">Тренировок Open Gym: <span id="gymWorkouts">0</span></p></div><form id="gymForm"><label>Адрес сервера<input name="base_url" value="https://opengym.qbav.online" required></label><label>Токен Open Gym<input name="token" type="password" placeholder="ogt_…" autocomplete="off" required></label><div class="actions"><button class="btn primary" type="submit" id="gymConnect">Подключить</button></div></form><div class="actions" id="gymActions" hidden><button class="btn outline" type="button" id="gymSync">Синхронизировать</button><button class="btn outline" type="button" id="gymReplace">Заменить токен</button><button class="text-btn danger-text" type="button" id="gymDisconnect">Отключить</button></div><p class="tiny muted">Создайте токен в Open Gym → Настройки → API-токены, только чтение тренировок.</p></div>
           <div class="panel" id="adminPanel" hidden><h3>Приглашения</h3><p class="muted">Ссылка действует 7 дней и работает один раз. Отправьте её новому участнику.</p><button class="btn outline" id="inviteCreate">Создать ссылку-приглашение</button><a id="newInvite" class="invite-code" target="_blank" rel="noopener" hidden></a><p id="inviteMeta" class="tiny muted" hidden></p></div>
         </div>
       </section>

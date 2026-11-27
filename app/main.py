@@ -541,6 +541,13 @@ def connect_gym(body: GymInput, user: User = Depends(current_user), db: Session 
     return {"ok": True, "profile": profile.get("user", {}).get("name", "Open Gym")}
 
 
+@app.get("/api/opengym/status")
+def gym_status(user: User = Depends(current_user), db: Session = Depends(get_db)):
+    connection = db.get(GymConnection, user.id)
+    count = db.scalar(select(func.count(GymWorkout.id)).where(GymWorkout.user_id == user.id)) or 0
+    return {"connected": bool(connection), "base_url": connection.base_url if connection else None, "workouts": count}
+
+
 @app.post("/api/opengym/sync")
 def sync_gym(user: User = Depends(current_user), db: Session = Depends(get_db)):
     connection = db.get(GymConnection, user.id)

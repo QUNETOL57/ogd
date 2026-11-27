@@ -1,1 +1,6 @@
 .heat-cell.workout{outline:2px solid var(--blue);outline-offset:0}.workout-key{display:inline-block;width:9px;height:9px;border:2px solid var(--blue);border-radius:2px}.ex-en{color:var(--muted);font-weight:400;font-size:11px}
+.actions{flex-wrap:wrap}
+.gym-state{display:grid;gap:3px;padding:10px;border:1px solid #d1fae5;background:#f0fdf4;border-radius:8px}
+.gym-connected{display:flex;align-items:center;gap:7px;color:#047857;font-size:12px;font-weight:600}
+.gym-dot{width:7px;height:7px;border-radius:50%;background:#10b981;flex:none}
+.token-mask{font-family:ui-monospace,monospace;color:#475569}
