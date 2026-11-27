@@ -31,8 +31,10 @@ class ImporterTest(unittest.TestCase):
         metrics = [row for kind, row in rows if kind == "metric"]
         workouts = [row for kind, row in rows if kind == "workout"]
 
-        self.assertEqual({m["key"] for m in metrics}, {"steps", "heart_rate", "sleep_minutes", "sleep_deep", "sleep_light", "sleep_rem"})
+        self.assertEqual({m["key"] for m in metrics}, {"steps", "heart_rate", "sleep_minutes", "sleep_deep", "sleep_light", "sleep_rem", "sleep_bedtime", "sleep_waketime"})
         self.assertEqual(next(m["value"] for m in metrics if m["key"] == "steps"), 42)
+        self.assertTrue(any(m["key"] == "sleep_bedtime" and 8.8 < m["value"] < 8.9 for m in metrics))
+        self.assertTrue(any(m["key"] == "sleep_waketime" and 17.2 < m["value"] < 17.3 for m in metrics))
         self.assertEqual(len(workouts), 1)
         self.assertEqual(workouts[0]["calories"], 55)
         self.assertEqual(workouts[0]["avg_hr"], 125)

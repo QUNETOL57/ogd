@@ -2,62 +2,146 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#f8fafc">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#000000">
   <title>openGym dashboard</title>
-  <link rel="stylesheet" href="/styles.css">
-  <link rel="stylesheet" href="/extras.css">
+  <link rel="stylesheet" href="/styles.css?v=10">
+  <link rel="stylesheet" href="/extras.css?v=10">
 </head>
 <body>
   <main id="auth" class="auth-wrap" hidden>
     <section class="auth-card">
-      <p class="eyebrow">ЛИЧНАЯ АНАЛИТИКА</p>
-      <h1>openGym dashboard</h1>
-      <p class="muted">Данные здоровья и тренировок — только для вас.</p>
-      <div class="auth-tabs"><button class="active" data-auth="login">Войти</button><button data-auth="register">Создать аккаунт</button></div>
+      <h1 class="auth-logo" aria-label="openGym dashboard">
+        <span class="logo-line">
+          <svg viewBox="80 169 352 174" aria-hidden="true"><path d="M80 242h352v28H80zM80 199h36v114H80zM131 169h47v174h-47zM334 169h47v174h-47zM396 199h36v114h-36z"/></svg>
+          <span class="logo-word">open<span>Gym</span></span>
+        </span>
+        <span class="logo-caption">dashboard</span>
+      </h1>
       <form id="authForm">
         <label>Имя пользователя<input name="username" autocomplete="username" required minlength="2" maxlength="40"></label>
         <label>Пароль<input name="password" type="password" autocomplete="current-password" required minlength="12"></label>
-        <label id="inviteField" hidden>Код приглашения<input name="invite" autocomplete="off"></label>
+        <label id="confirmField" hidden>Повторите пароль<input name="confirm" type="password" autocomplete="new-password" minlength="12" disabled></label>
         <button class="btn primary full" type="submit" id="authSubmit">Войти</button>
       </form>
+      <p id="authSwitch" class="tiny muted" hidden>Уже есть аккаунт? <a href="/">Войти</a></p>
       <p id="authError" class="error" role="alert"></p>
-      <p class="tiny muted">Регистрация доступна по приглашению. Пароль — не короче 12 символов.</p>
     </section>
   </main>
 
   <div id="app" class="app-shell" hidden>
     <aside class="sidebar">
-      <a class="brand" href="#"><span>openGym dashboard</span></a>
+      <a class="brand" href="#" aria-label="openGym dashboard">
+        <span class="brand-logo">
+          <span class="logo-line">
+            <svg viewBox="80 169 352 174" aria-hidden="true"><path d="M80 242h352v28H80zM80 199h36v114H80zM131 169h47v174h-47zM334 169h47v174h-47zM396 199h36v114h-36z"/></svg>
+            <span class="logo-word">open<span>Gym</span></span>
+          </span>
+          <span class="logo-caption">dashboard</span>
+        </span>
+      </a>
       <div class="side-label">РАЗДЕЛЫ</div>
       <nav class="nav">
-        <button class="nav-item active" data-view="dashboard"><span>◫</span>Обзор</button>
-        <button class="nav-item" data-view="workouts"><span>⌁</span>Тренировки</button>
-        <button class="nav-item" data-view="compare"><span>⇄</span>Сравнение</button>
-        <button class="nav-item" data-view="settings"><span>⚙</span>Настройки</button>
+        <button class="nav-item active" data-view="dashboard"><span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg></span>Обзор</button>
+        <button class="nav-item" data-view="workouts"><span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 7v10M3.5 9.5v5M17.5 7v10M20.5 9.5v5M6.5 12h11"/></svg></span>Тренировки</button>
+        <button class="nav-item" data-view="compare"><span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3 4 7l4 4M4 7h16"/><path d="m16 21 4-4-4-4M20 17H4"/></svg></span>Сравнение</button>
+        <button class="nav-item" data-view="settings"><span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h5M13 6h7M4 12h11M19 12h1M4 18h3M11 18h9"/><circle cx="11" cy="6" r="2"/><circle cx="17" cy="12" r="2"/><circle cx="9" cy="18" r="2"/></svg></span>Настройки</button>
       </nav>
       <div class="side-bottom"><div class="user-mini"><span class="avatar" id="avatar">O</span><span><b id="userName"></b><small>Личный профиль</small></span></div><button id="logout" class="text-btn">Выйти</button></div>
     </aside>
 
     <section class="main-area">
-      <header class="topbar"><div><span class="breadcrumb">ЗДОРОВЬЕ</span><h1 id="pageTitle">Обзор</h1></div><div class="top-actions"><span class="tz-tag">◷ Москва · UTC+3</span><button class="btn outline" id="importOpen">＋ Импорт данных</button></div></header>
+      <header class="topbar"><div class="topbar-head"><span class="topbar-mark" aria-hidden="true"><svg viewBox="80 169 352 174"><path d="M80 242h352v28H80zM80 199h36v114H80zM131 169h47v174h-47zM334 169h47v174h-47zM396 199h36v114h-36z"/></svg></span><div><span class="breadcrumb">ЗДОРОВЬЕ</span><h1 id="pageTitle">Обзор</h1></div></div><div class="top-actions"><span class="tz-tag">◷ Москва · UTC+3</span><button class="text-btn" id="logoutMobile" type="button">Выйти</button><button class="btn outline" id="importOpen">＋ Импорт данных</button></div></header>
       <div id="notice" class="notice" role="status" hidden></div>
 
+      <section id="importStatus" class="panel import-status" hidden>
+        <div class="panel-head"><div><h3>Импорт архива</h3><p class="muted">Время начала и статус обработки</p></div><button class="text-btn" type="button" id="importStatusClose">Скрыть</button></div>
+        <div class="import-table-wrap"><table class="import-table"><thead><tr><th>Начало</th><th>Файл</th><th>Статус</th><th>Прогресс</th></tr></thead><tbody id="importRows"></tbody></table></div>
+      </section>
+
       <section class="view" id="view-dashboard">
-        <div class="toolbar"><div><h2>Ваше здоровье</h2><p class="muted" id="rangeCaption">—</p></div><div class="pills" id="periods"><button data-period="day">День</button><button data-period="week">Неделя</button><button data-period="month">Месяц</button><button data-period="year" class="active">Год</button><button data-period="all">Всё время</button></div></div>
+        <div class="toolbar"><div><h2>Ваше здоровье</h2><p class="muted" id="rangeCaption">—</p></div><div class="pills" id="periods"><button data-period="day">День</button><button data-period="week">Неделя</button><button data-period="month">Месяц</button><button data-period="year">Год</button><button data-period="all" class="active">Всё время</button></div></div>
         <div class="kpis" id="kpis"></div>
-        <div class="panel"><div class="panel-head"><div><h3>Активность по дням</h3><p class="muted">Шаги и сожжённые килокалории</p></div><div class="legend"><span><i class="dot blue"></i>Шаги</span><span><i class="dot amber"></i>ккал</span></div></div><div class="chart-box"><canvas id="activityChart"></canvas></div></div>
-        <div class="grid-2">
-        <div class="panel"><div class="panel-head"><div><h3>Календарь активности</h3><p class="muted">Последние 12 месяцев</p></div><div class="legend"><span><i class="dot green"></i>Шаги</span><span><i class="workout-key"></i>Тренировка</span></div></div><div id="heatmap" class="heatmap"></div><div class="heat-legend"><span>Меньше</span><i></i><i></i><i></i><i></i><span>Больше</span></div></div>
-          <div class="panel"><div class="panel-head"><div><h3>Сон</h3><p class="muted">Продолжительность сна по дням</p></div><span class="unit">часы</span></div><div class="chart-box short"><canvas id="sleepChart"></canvas></div></div>
+
+        <div class="panel">
+          <div class="panel-head"><div><h3>Шаги по дням и скользящее среднее (14 дн.)</h3><p class="muted">Дневные значения, среднее за 14 дней и цель 10 000 шагов</p></div><div class="legend"><span><i class="dot blue"></i>Шаги</span><span><i class="dot amber"></i>Среднее 14 дн.</span><span><i class="dot green"></i>Цель</span></div></div>
+          <div class="chart-box"><canvas id="activityChart"></canvas></div>
         </div>
+
         <div class="grid-2">
-          <div class="panel"><div class="panel-head"><div><h3>Пульс</h3><p class="muted">Средний, минимальный и максимальный</p></div><span class="unit">уд/мин</span></div><div class="chart-box short"><canvas id="hrChart"></canvas></div></div>
-          <div class="panel"><div class="panel-head"><div><h3>Стресс</h3><p class="muted">Средний уровень по дням</p></div><span class="unit">баллы</span></div><div class="chart-box short"><canvas id="stressChart"></canvas></div></div>
+          <div class="panel">
+            <div class="panel-head"><div><h3>Календарь за 12 месяцев</h3><p class="muted">Активность по дням</p></div><div class="pills" id="hmPills"><button data-hm="steps" class="active">Шаги</button><button data-hm="workouts">Тренировки</button></div></div>
+            <div class="heatmap-wrap"><canvas id="heatmapChart" style="height:126px"></canvas></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><div><h3>Профиль недели (Пн–Вс)</h3><p class="muted">Средние шаги и тренировки по дням недели</p></div><div class="legend"><span><i class="dot blue"></i>Ср. шаги</span><span><i class="dot green"></i>Тренировки</span></div></div>
+            <div class="chart-box" style="height:126px"><canvas id="weekdayChart"></canvas></div>
+          </div>
         </div>
+
         <div class="grid-2">
-          <div class="panel"><div class="panel-head"><div><h3>Вес</h3><p class="muted">Измерения веса</p></div><span class="unit">кг</span></div><div class="chart-box short"><canvas id="weightChart"></canvas></div></div>
-          <div class="panel"><div class="panel-head"><div><h3>Тренировки</h3><p class="muted">Последние занятия и потраченная энергия</p></div><button class="text-btn" data-goto="workouts">Все тренировки →</button></div><div id="recentWorkouts" class="recent-list"></div></div>
+          <div class="panel">
+            <div class="panel-head"><div><h3>Тренировки по видам спорта</h3><p class="muted">Количество занятий и суммарное время</p></div><span class="unit" id="sportSub"></span></div>
+            <div id="sportBreakdown" class="sport-breakdown"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><div><h3>Тренировки по месяцам</h3><p class="muted">Распределение по видам спорта</p></div><div id="monthlyWorkoutLegend" class="legend"></div></div>
+            <div class="chart-box short"><canvas id="monthlyWorkoutsChart"></canvas></div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="panel">
+            <div class="panel-head"><div><h3>Плавание: дистанция и пульс</h3><p class="muted">По тренировкам плавания</p></div><div class="legend"><span><i class="dot blue"></i>Дистанция, м</span><span><i class="dot red"></i>Ср. пульс</span></div></div>
+            <div class="chart-box short"><canvas id="swimChart"></canvas></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><div><h3>Пульсовые зоны в тренировках</h3><p class="muted">Время по зонам, часы</p></div><div class="legend"><span><i class="dot lime"></i>Разминка</span><span><i class="dot green"></i>Жиросжиг.</span><span><i class="dot amber"></i>Аэробная</span><span><i class="dot red"></i>Анаэроб.+</span></div></div>
+            <div class="chart-box short"><canvas id="zonesChart"></canvas></div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="panel">
+            <div class="panel-head"><div><h3>Сон: фазы и длительность</h3><p class="muted">Глубокий, REM и лёгкий сон по дням</p></div><div class="legend"><span><i class="dot purple"></i>Глубокий</span><span><i class="dot lime"></i>REM</span><span><i class="dot blue"></i>Лёгкий</span><span><i class="dot amber"></i>Ср. 14 дн.</span></div></div>
+            <div class="chart-box short"><canvas id="sleepStagesChart"></canvas></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><div><h3>Режим сна: отбой и подъём</h3><p class="muted">Время засыпания и пробуждения</p></div><div class="legend"><span><i class="dot purple"></i>Засыпание</span><span><i class="dot amber"></i>Пробуждение</span></div></div>
+            <div class="chart-box short"><canvas id="sleepScheduleChart"></canvas></div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="panel">
+            <div class="panel-head"><div><h3>Пульс: покой, средний и разброс</h3><p class="muted">Частота сердечных сокращений по дням</p></div><div class="legend"><span><i class="dot red"></i>Средний</span><span><i class="dot green"></i>В покое (RHR)</span></div></div>
+            <div class="chart-box short"><canvas id="hrChart"></canvas></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><div><h3>Стресс и SpO₂</h3><p class="muted">Средние значения за день</p></div><div class="legend"><span><i class="dot amber"></i>Стресс</span><span><i class="dot lime"></i>SpO₂, %</span></div></div>
+            <div class="chart-box short"><canvas id="stressChart"></canvas></div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="panel">
+            <div class="panel-head"><div><h3>Активные калории и нагрузка</h3><p class="muted">Калории за день и тренировочная нагрузка</p></div><div class="legend"><span><i class="dot amber"></i>Калории, ккал</span><span><i class="dot blue"></i>Нагрузка</span></div></div>
+            <div class="chart-box short"><canvas id="calChart"></canvas></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><div><h3>Вес</h3><p class="muted">Измерения веса</p></div><div class="legend"><span><i class="dot green"></i>Вес, кг</span></div></div>
+            <div class="chart-box short"><canvas id="weightChart"></canvas></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><div><h3>Рекорды периода</h3><p class="muted">Лучшие результаты за выбранный период</p></div></div>
+          <div id="records" class="rec-grid"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><div><h3>Последние тренировки</h3><p class="muted">Детали последних занятий</p></div><div class="pills" id="woFilter"><button data-cat="all" class="active">Все</button><button data-cat="swimming">Плавание</button><button data-cat="tennis">Теннис</button><button data-cat="snowboarding">Сноуборд</button><button data-cat="other">Зал / бег</button></div></div>
+          <div class="wo-wrap"><table class="wo-tbl" id="woTable"></table></div>
         </div>
       </section>
 
@@ -76,8 +160,8 @@
         <div class="toolbar"><div><h2>Настройки</h2><p class="muted">Импорт данных и подключения</p></div></div>
         <div class="grid-2 settings-grid">
           <div class="panel"><h3>Импорт данных</h3><p class="muted">Загрузите ZIP-архив и введите пароль от него. Пароль используется только для чтения архива и не сохраняется.</p><button class="btn primary" id="importOpen2">Загрузить архив</button><div id="importHistory" class="tiny muted"></div></div>
-          <div class="panel"><h3>Open Gym</h3><p class="muted">Подключите личный токен Open Gym с разрешением «Тренировки: просмотр». Токен будет зашифрован в базе данных.</p><form id="gymForm"><label>Адрес сервера<input name="base_url" value="https://opengym.qbav.online" required></label><label>Токен Open Gym<input name="token" type="password" placeholder="ogt_…" autocomplete="off" required></label><div class="actions"><button class="btn primary" type="submit">Подключить</button><button class="btn outline" type="button" id="gymSync">Синхронизировать</button><button class="text-btn danger-text" type="button" id="gymDisconnect">Отключить</button></div></form><p class="tiny muted">Создайте токен в Open Gym → Настройки → API-токены, только чтение тренировок.</p></div>
-          <div class="panel" id="adminPanel" hidden><h3>Приглашения</h3><p class="muted">Администратор может создать одноразовый код для нового участника.</p><button class="btn outline" id="inviteCreate">Создать приглашение</button><p id="newInvite" class="invite-code"></p></div>
+          <div class="panel"><h3>Open Gym</h3><p class="muted">Подключите личный токен Open Gym с разрешением «Тренировки: просмотр». Токен хранится в зашифрованном виде.</p><div class="gym-state" id="gymState" hidden><div class="gym-connected"><span class="gym-dot"></span>Токен сохранён</div><p class="tiny muted">Сервер: <span id="gymServer"></span></p><p class="tiny muted">Токен: <span class="token-mask">ogt_••••••••</span></p><p class="tiny muted">Тренировок Open Gym: <span id="gymWorkouts">0</span></p></div><form id="gymForm"><label>Адрес сервера<input name="base_url" value="https://opengym.qbav.online" required></label><label>Токен Open Gym<input name="token" type="password" placeholder="ogt_…" autocomplete="off" required></label><div class="actions"><button class="btn primary" type="submit" id="gymConnect">Подключить</button></div></form><div class="actions" id="gymActions" hidden><button class="btn outline" type="button" id="gymSync">Синхронизировать</button><button class="btn outline" type="button" id="gymReplace">Заменить токен</button><button class="text-btn danger-text" type="button" id="gymDisconnect">Отключить</button></div><p class="tiny muted">Создайте токен в Open Gym → Настройки → API-токены, только чтение тренировок.</p></div>
+          <div class="panel" id="adminPanel" hidden><h3>Приглашения</h3><p class="muted">Ссылка действует 7 дней и работает один раз. Отправьте её новому участнику.</p><button class="btn outline" id="inviteCreate">Создать ссылку-приглашение</button><a id="newInvite" class="invite-code" target="_blank" rel="noopener" hidden></a><p id="inviteMeta" class="tiny muted" hidden></p></div>
         </div>
       </section>
       <footer>openGym dashboard · Europe/Moscow <span>Ваши данные изолированы и доступны только вашему аккаунту.</span></footer>
@@ -86,7 +170,8 @@
 
   <dialog id="importDialog" class="dialog"><form id="importForm"><button class="dialog-close" type="button" data-close>×</button><div class="eyebrow">ИМПОРТ ДАННЫХ</div><h2>Архив данных</h2><p class="muted">Выберите ZIP и введите пароль архива. Файл не распаковывается в общую папку.</p><label>ZIP-файл<input name="file" type="file" accept=".zip,application/zip" required></label><label>Пароль архива<input name="password" type="password" autocomplete="off" required></label><div class="dialog-actions"><button class="btn outline" type="button" data-close>Отмена</button><button class="btn primary" type="submit">Импортировать</button></div><p class="error" id="importError"></p></form></dialog>
   <dialog id="detailDialog" class="dialog detail-dialog"><button class="dialog-close" type="button" data-close>×</button><div id="workoutDetail"></div></dialog>
+  <div id="tip" class="tip"></div>
   <div id="toast" class="toast" role="status"></div>
-  <script src="/app.js" defer></script>
+  <script src="/app.js?v=10" defer></script>
 </body>
 </html>

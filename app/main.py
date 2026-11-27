@@ -16,7 +16,7 @@ from cryptography.fernet import Fernet, InvalidToken
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
-from sqlalchemy import BigInteger, Boolean, Date, DateTime, Float, ForeignKey, Index, Integer, JSON, String, Text, UniqueConstraint, create_engine, func, select
+from sqlalchemy import BigInteger, Boolean, Date, DateTime, Float, ForeignKey, Index, Integer, JSON, String, Text, UniqueConstraint, create_engine, func, select, text
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import DeclarativeBase, Session, mapped_column, sessionmaker
 
@@ -24,6 +24,7 @@ from .importer import archive_digest, exercise_aliases, exercise_label, exercise
 
 BASE = Path(__file__).parent
 TZ = ZoneInfo("Europe/Moscow")
+INVITE_DAYS = 7
 DB_URL = os.environ["DATABASE_URL"]
 engine = create_engine(DB_URL, pool_pre_ping=True)
 SessionLocal = sessionmaker(engine, expire_on_commit=False)
@@ -52,6 +53,7 @@ class Invite(BaseModelDB):
     created_by = mapped_column(Integer, ForeignKey("users.id"))
     used_by = mapped_column(Integer, ForeignKey("users.id"))
     created_at = mapped_column(DateTime(timezone=True), server_default=func.now())
+    expires_at = mapped_column(DateTime(timezone=True))
 
 
 class LoginSession(BaseModelDB):
@@ -190,10 +192,16 @@ def _cookie(response, token):
     response.set_cookie("ogd_session", token, httponly=True, secure=os.getenv("COOKIE_SECURE", "0") == "1", samesite="lax", max_age=30 * 86400, path="/")
 
 
-class Credentials(BaseModel):
+class LoginInput(BaseModel):
+    username: str = Field(min_length=2, max_length=40)
+    password: str = Field(min_length=1, max_length=200)
+
+
+class RegisterInput(BaseModel):
     username: str = Field(min_length=2, max_length=40)
     password: str = Field(min_length=12, max_length=200)
-    invite: str = ""
+    confirm: str = Field(min_length=12, max_length=200)
+    invite: str = Field(min_length=1, max_length=64)
 
 
 class ShareChoice(BaseModel):
@@ -208,11 +216,14 @@ class GymInput(BaseModel):
 @app.on_event("startup")
 def startup():
     BaseModelDB.metadata.create_all(engine)
+    with engine.begin() as conn:
+        conn.execute(text("ALTER TABLE invites ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ"))
+        conn.execute(text("UPDATE invites SET expires_at = created_at + interval '7 days' WHERE expires_at IS NULL"))
     bootstrap = os.getenv("BOOTSTRAP_INVITE", "").strip()
     if bootstrap:
         with SessionLocal() as db:
             if not db.scalar(select(Invite.id).where(Invite.code_hash == _invite_hash(bootstrap))):
-                db.add(Invite(code_hash=_invite_hash(bootstrap)))
+                db.add(Invite(code_hash=_invite_hash(bootstrap), expires_at=datetime.now(timezone.utc) + timedelta(days=INVITE_DAYS)))
                 db.commit()
 
 
@@ -242,24 +253,31 @@ def health():
 
 
 @app.post("/api/register")
-def register(body: Credentials, request: Request, db: Session = Depends(get_db)):
+def register(body: RegisterInput, request: Request, db: Session = Depends(get_db)):
     _auth_gate(request)
+    if body.password != body.confirm:
+        raise HTTPException(400, "Пароли не совпадают")
     username = body.username.strip()
     if not username or any(ord(c) < 32 for c in username):
         raise HTTPException(400, "Укажите корректное имя")
-    invite = db.scalar(select(Invite).where(Invite.code_hash == _invite_hash(body.invite), Invite.used_by.is_(None)).with_for_update())
+    now = datetime.now(timezone.utc)
+    invite = db.scalar(select(Invite).where(
+        Invite.code_hash == _invite_hash(body.invite),
+        Invite.used_by.is_(None),
+        Invite.expires_at > now,
+    ).with_for_update())
     if not invite:
-        raise HTTPException(403, "Приглашение недействительно или уже использовано")
+        raise HTTPException(403, "Приглашение недействительно, уже использовано или истекло")
     if db.scalar(select(User.id).where(func.lower(User.username) == username.lower())):
         raise HTTPException(409, "Это имя уже занято")
     admin = db.scalar(select(User.id)) is None
     user = User(username=username, password_hash=_hash_secret(body.password), is_admin=admin)
     db.add(user)
     db.flush()
-    db.query(LoginSession).filter(LoginSession.expires_at < datetime.now(timezone.utc)).delete()
+    db.query(LoginSession).filter(LoginSession.expires_at < now).delete()
     invite.used_by = user.id
     token = secrets.token_urlsafe(32)
-    db.add(LoginSession(user_id=user.id, token_hash=hashlib.sha256(token.encode()).hexdigest(), expires_at=datetime.now(timezone.utc) + timedelta(days=30)))
+    db.add(LoginSession(user_id=user.id, token_hash=hashlib.sha256(token.encode()).hexdigest(), expires_at=now + timedelta(days=30)))
     db.commit()
     result = JSONResponse({"id": user.id, "username": user.username, "is_admin": user.is_admin})
     _cookie(result, token)
@@ -267,14 +285,15 @@ def register(body: Credentials, request: Request, db: Session = Depends(get_db))
 
 
 @app.post("/api/login")
-def login(body: Credentials, request: Request, db: Session = Depends(get_db)):
+def login(body: LoginInput, request: Request, db: Session = Depends(get_db)):
     _auth_gate(request)
     user = db.scalar(select(User).where(func.lower(User.username) == body.username.strip().lower()))
     if not user or not _verify_secret(body.password, user.password_hash):
         raise HTTPException(401, "Неверное имя или пароль")
     token = secrets.token_urlsafe(32)
-    db.query(LoginSession).filter(LoginSession.expires_at < datetime.now(timezone.utc)).delete()
-    db.add(LoginSession(user_id=user.id, token_hash=hashlib.sha256(token.encode()).hexdigest(), expires_at=datetime.now(timezone.utc) + timedelta(days=30)))
+    now = datetime.now(timezone.utc)
+    db.query(LoginSession).filter(LoginSession.expires_at < now).delete()
+    db.add(LoginSession(user_id=user.id, token_hash=hashlib.sha256(token.encode()).hexdigest(), expires_at=now + timedelta(days=30)))
     db.commit()
     result = JSONResponse({"id": user.id, "username": user.username, "is_admin": user.is_admin, "share_comparison": user.share_comparison})
     _cookie(result, token)
@@ -298,21 +317,43 @@ def me(user: User = Depends(current_user), db: Session = Depends(get_db)):
     return {"id": user.id, "username": user.username, "is_admin": user.is_admin, "share_comparison": user.share_comparison, "last_date": latest.isoformat() if latest else None}
 
 
+def _public_origin(request: Request):
+    origins = [item.strip().rstrip("/") for item in os.getenv("APP_ORIGIN", "").split(",") if item.strip()]
+    return origins[0] if origins else str(request.base_url).rstrip("/")
+
+
 @app.get("/api/invites")
 def list_invites(user: User = Depends(current_user), db: Session = Depends(get_db)):
     if not user.is_admin:
         raise HTTPException(403, "Только администратор может управлять приглашениями")
-    return {"invites": [{"created_at": row.created_at.isoformat(), "used": row.used_by is not None} for row in db.scalars(select(Invite).order_by(Invite.id.desc()).limit(30))]}
+    now = datetime.now(timezone.utc)
+    return {"invites": [{
+        "created_at": row.created_at.isoformat(),
+        "expires_at": row.expires_at.isoformat() if row.expires_at else None,
+        "used": row.used_by is not None,
+        "expired": not row.expires_at or row.expires_at <= now,
+    } for row in db.scalars(select(Invite).order_by(Invite.id.desc()).limit(30))]}
+
+
+@app.get("/api/invites/{code}")
+def invite_status(code: str, db: Session = Depends(get_db)):
+    invite = db.scalar(select(Invite).where(Invite.code_hash == _invite_hash(code)))
+    now = datetime.now(timezone.utc)
+    return {
+        "valid": bool(invite and invite.used_by is None and invite.expires_at and invite.expires_at > now),
+        "expires_at": invite.expires_at.isoformat() if invite and invite.expires_at else None,
+    }
 
 
 @app.post("/api/invites")
-def create_invite(user: User = Depends(current_user), db: Session = Depends(get_db)):
+def create_invite(request: Request, user: User = Depends(current_user), db: Session = Depends(get_db)):
     if not user.is_admin:
         raise HTTPException(403, "Недостаточно прав")
     code = secrets.token_hex(8).upper()
-    db.add(Invite(code_hash=_invite_hash(code), created_by=user.id))
+    expires_at = datetime.now(timezone.utc) + timedelta(days=INVITE_DAYS)
+    db.add(Invite(code_hash=_invite_hash(code), created_by=user.id, expires_at=expires_at))
     db.commit()
-    return {"code": code}
+    return {"code": code, "url": f"{_public_origin(request)}/join/{code}", "expires_at": expires_at.isoformat()}
 
 
 @app.put("/api/preferences/sharing")
@@ -329,8 +370,7 @@ def import_zip(request: Request, file: UploadFile = File(...), password: str = F
     if file.size and file.size > 500 * 1024 * 1024:
         raise HTTPException(413, "Максимальный размер архива — 500 МБ")
     digest = archive_digest(file.file)
-    if db.scalar(select(ImportBatch.id).where(ImportBatch.user_id == user.id, ImportBatch.digest == digest)):
-        return {"ok": True, "duplicate": True, "message": "Этот архив уже импортирован"}
+    already_imported = db.scalar(select(ImportBatch.id).where(ImportBatch.user_id == user.id, ImportBatch.digest == digest)) is not None
     metric_count = workout_count = 0
     metric_batch = []
     try:
@@ -355,7 +395,8 @@ def import_zip(request: Request, file: UploadFile = File(...), password: str = F
             db.execute(insert(Metric).values(metric_batch).on_conflict_do_nothing(constraint="uq_metrics_user_key_sample_ts_payload_hash"))
         if not metric_count and not workout_count:
             raise ValueError("В архиве не найдены данные здоровья")
-        db.add(ImportBatch(user_id=user.id, digest=digest, file_name=Path(file.filename).name[:255]))
+        if not already_imported:
+            db.add(ImportBatch(user_id=user.id, digest=digest, file_name=Path(file.filename).name[:255]))
         db.commit()
     except (RuntimeError, zipfile.BadZipFile, zipfile.LargeZipFile, OSError) as exc:
         db.rollback()
@@ -366,7 +407,7 @@ def import_zip(request: Request, file: UploadFile = File(...), password: str = F
     except Exception:
         db.rollback()
         raise HTTPException(500, "Импорт не завершён; данные не были сохранены")
-    return {"ok": True, "metrics": metric_count, "workouts": workout_count, "message": f"Импортировано показателей: {metric_count}, тренировок: {workout_count}"}
+    return {"ok": True, "duplicate": already_imported, "metrics": metric_count, "workouts": workout_count, "message": f"Обработано показателей: {metric_count}, тренировок: {workout_count}"}
 
 
 def _period_start(period, last_date):
@@ -379,7 +420,7 @@ def _period_start(period, last_date):
 
 
 @app.get("/api/dashboard")
-def dashboard(period: str = "year", user: User = Depends(current_user), db: Session = Depends(get_db)):
+def dashboard(period: str = "all", user: User = Depends(current_user), db: Session = Depends(get_db)):
     last_date = db.scalar(select(func.max(Metric.local_date)).where(Metric.user_id == user.id))
     start = _period_start(period, last_date)
     query = select(Metric.local_date, Metric.key, func.sum(Metric.value), func.avg(Metric.value), func.min(Metric.value), func.max(Metric.value)).where(Metric.user_id == user.id)
@@ -397,6 +438,7 @@ def dashboard(period: str = "year", user: User = Depends(current_user), db: Sess
         elif key == "spo2": row["spo2_avg"] = round(float(avg), 1)
         elif key == "sleep_minutes": row["sleep_min"] = round(float(total))
         elif key in {"sleep_deep", "sleep_light", "sleep_rem"}: row[key] = round(float(total))
+        elif key in {"sleep_bedtime", "sleep_waketime"}: row[key] = round(float(avg), 2)
         elif key == "rhr": row["rhr"] = round(float(avg))
         elif key == "weight": row["weight"] = round(float(avg), 1)
     last = max(daily) if daily else None
@@ -408,6 +450,20 @@ def _gym_match(db, user_id, workout):
     if not candidate:
         return None
     return {"id": candidate.id, "name": candidate.name, "start_ts": candidate.start_ts, "end_ts": candidate.end_ts, "detail": candidate.detail}
+
+
+def _raw_number(raw, key):
+    value = raw.get(key) if isinstance(raw, dict) else None
+    return float(value) if isinstance(value, (int, float)) else None
+
+
+def _workout_zones(raw):
+    if not isinstance(raw, dict):
+        return None
+    keys = ("hrm_warm_up_duration", "hrm_fat_burning_duration", "hrm_aerobic_duration", "hrm_anaerobic_duration", "hrm_extreme_duration")
+    if not any(raw.get(key) is not None for key in keys):
+        return None
+    return [round(float(raw.get(key) or 0) / 60, 1) for key in keys]
 
 
 @app.get("/api/workouts")
@@ -438,13 +494,13 @@ def workouts(period: str = "all", user: User = Depends(current_user), db: Sessio
         nearby = gym_starts[max(0, pos - 1):pos + 1]
         match_start = min((stamp for stamp in nearby if abs(stamp - workout.start_ts) <= 30 * 60), key=lambda stamp: abs(stamp - workout.start_ts), default=None)
         match = gym_by_start.get(match_start)
-        result.append({"id": workout.id, "name": workout.name, "kind": workout.kind, "source": "import", "start_ts": workout.start_ts, "duration_s": workout.duration_s, "calories": workout.calories, "distance_m": workout.distance_m, "avg_hr": workout.avg_hr, "min_hr": workout.min_hr, "max_hr": workout.max_hr, "swolf": workout.swolf, "gym": {"id": match.id, "name": match.name, "start_ts": match.start_ts, "end_ts": match.end_ts, "detail": match.detail} if match else None})
+        result.append({"id": workout.id, "name": workout.name, "kind": workout.kind, "source": "import", "start_ts": workout.start_ts, "duration_s": workout.duration_s, "calories": workout.calories, "distance_m": workout.distance_m, "avg_hr": workout.avg_hr, "min_hr": workout.min_hr, "max_hr": workout.max_hr, "swolf": workout.swolf, "zones": _workout_zones(workout.raw), "load": _raw_number(workout.raw, "train_load"), "vit": _raw_number(workout.raw, "vitality"), "gym": {"id": match.id, "name": match.name, "start_ts": match.start_ts, "end_ts": match.end_ts, "detail": match.detail} if match else None})
     for gym in gym_rows:
         pos = bisect_left(mi_starts, gym.start_ts)
         nearby = mi_starts[max(0, pos - 1):pos + 1]
         if any(abs(start - gym.start_ts) <= 30 * 60 for start in nearby):
             continue
-        result.append({"id": f"gym:{gym.id}", "name": gym.name, "kind": "opengym", "source": "opengym", "start_ts": gym.start_ts, "duration_s": max(0, gym.end_ts - gym.start_ts), "calories": None, "distance_m": None, "avg_hr": None, "min_hr": None, "max_hr": None, "swolf": None, "gym": {"id": gym.id, "name": gym.name, "start_ts": gym.start_ts, "end_ts": gym.end_ts, "detail": gym.detail}})
+        result.append({"id": f"gym:{gym.id}", "name": gym.name, "kind": "opengym", "source": "opengym", "start_ts": gym.start_ts, "duration_s": max(0, gym.end_ts - gym.start_ts), "calories": None, "distance_m": None, "avg_hr": None, "min_hr": None, "max_hr": None, "swolf": None, "zones": None, "load": None, "vit": None, "gym": {"id": gym.id, "name": gym.name, "start_ts": gym.start_ts, "end_ts": gym.end_ts, "detail": gym.detail}})
     result.sort(key=lambda w: w["start_ts"], reverse=True)
     return {"workouts": result[:1000]}
 
@@ -498,6 +554,13 @@ def connect_gym(body: GymInput, user: User = Depends(current_user), db: Session 
         db.add(GymConnection(user_id=user.id, token_cipher=cipher, base_url=base))
     db.commit()
     return {"ok": True, "profile": profile.get("user", {}).get("name", "Open Gym")}
+
+
+@app.get("/api/opengym/status")
+def gym_status(user: User = Depends(current_user), db: Session = Depends(get_db)):
+    connection = db.get(GymConnection, user.id)
+    count = db.scalar(select(func.count(GymWorkout.id)).where(GymWorkout.user_id == user.id)) or 0
+    return {"connected": bool(connection), "base_url": connection.base_url if connection else None, "workouts": count}
 
 
 @app.post("/api/opengym/sync")
@@ -591,5 +654,5 @@ def static(path: str):
     candidate = (BASE / "static" / path).resolve()
     static_root = (BASE / "static").resolve()
     if candidate.parent == static_root and candidate.is_file():
-        return FileResponse(candidate)
-    return FileResponse(static_root / "index.html")
+        return FileResponse(candidate, headers={"Cache-Control": "no-cache"})
+    return FileResponse(static_root / "index.html", headers={"Cache-Control": "no-cache"})
