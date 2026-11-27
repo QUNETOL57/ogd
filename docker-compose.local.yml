@@ -1,0 +1,7 @@
+services:
+  app:
+    environment:
+      APP_ORIGIN: http://localhost:8000
+      COOKIE_SECURE: "0"
+    ports:
+      - "127.0.0.1:8000:8000"
